@@ -105,21 +105,21 @@ export default function Calendar() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="relative min-h-screen flex flex-col" style={{ background: "#f5f0e8" }}>
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-white border-b shadow-sm px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-800">📅 Calendario das AV3 CEAM</h1>
+      <header className="sticky top-0 z-20 px-5 py-3 flex items-center justify-between" style={{ background: "#f5f0e8" }}>
+        <h1 className="text-sm font-semibold text-gray-500 tracking-wide uppercase">📅 CEAM · AV3</h1>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowEmails(true)}
-            className="px-3 py-1 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            className="px-4 py-1.5 rounded-full text-sm font-medium border border-blue-200 bg-white text-blue-600 hover:bg-blue-50 transition-colors shadow-sm"
           >
             Emails
           </button>
           {isOwner && (
             <button
               onClick={() => { setEditMode(!editMode); }}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${editMode ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-700"}`}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${editMode ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200"}`}
             >
               {editMode ? "✏️ Editando" : "Ver"}
             </button>
@@ -127,7 +127,7 @@ export default function Calendar() {
           {isOwner && (
             <button
               onClick={() => { setIsOwner(false); setEditMode(false); }}
-              className="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600"
+              className="px-3 py-1.5 rounded-full text-sm bg-white text-gray-500 border border-gray-200"
             >
               Sair
             </button>
@@ -136,15 +136,15 @@ export default function Calendar() {
       </header>
 
       {/* Month tabs */}
-      <div className="bg-white border-b px-4 py-2 flex gap-2 overflow-x-auto">
+      <div className="px-5 py-2 flex gap-2 overflow-x-auto" style={{ background: "#f5f0e8" }}>
         {MONTHS.map((m, i) => (
           <button
             key={m.month}
             onClick={() => scrollToMonth(i)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
               currentMonthIndex === i
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                ? "bg-gray-900 text-white border-gray-900"
+                : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
             }`}
           >
             {m.name}
@@ -266,57 +266,76 @@ function MonthView({
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
 
-  return (
-    <div className="min-w-full snap-start flex flex-col p-4">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
-        {monthName} {year}
-      </h2>
-      {/* Day headers */}
-      <div className="grid grid-cols-7 mb-1">
-        {DAY_NAMES.map((d) => (
-          <div key={d} className="text-center text-xs font-semibold text-gray-400 py-1">
-            {d}
-          </div>
-        ))}
-      </div>
-      {/* Day cells */}
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map((day, i) => {
-          if (!day) return <div key={`empty-${i}`} />;
-          const data = dayMap[day];
-          const hasAssignments = data && data.assignments.length > 0;
-          const bgColor = data?.color && data.color !== "#ffffff" ? data.color : undefined;
-          const isToday = isCurrentMonth && today.getDate() === day;
+  const DAY_NAMES_FULL = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
 
-          return (
-            <button
-              key={day}
-              onClick={() => editMode ? onEditDay(day) : onDayClick(day)}
-              className={`
-                relative aspect-square flex flex-col items-center justify-start pt-1 rounded-lg text-sm font-medium
-                transition-all hover:scale-105 active:scale-95 border
-                ${isToday ? "border-indigo-500 ring-2 ring-indigo-300" : "border-transparent"}
-                ${bgColor ? "" : "bg-white hover:bg-gray-50"}
-                ${editMode ? "cursor-pointer ring-1 ring-indigo-200" : "cursor-pointer"}
-              `}
-              style={bgColor ? { backgroundColor: bgColor } : {}}
-            >
-              <span className={`text-xs font-bold ${isToday ? "text-indigo-600" : "text-gray-700"}`}>
-                {day}
-              </span>
-              {hasAssignments && (
-                <div className="flex flex-wrap justify-center gap-0.5 mt-0.5">
-                  {data.assignments.slice(0, 3).map((_, idx) => (
-                    <div key={idx} className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                  ))}
-                </div>
-              )}
-              {editMode && (
-                <div className="absolute top-0.5 right-0.5 text-indigo-400 text-xs">✏️</div>
-              )}
-            </button>
-          );
-        })}
+  return (
+    <div className="min-w-full snap-start flex flex-col px-4 pb-6">
+      {/* Big month title like the reference */}
+      <div className="mb-4 mt-2">
+        <h2 className="text-5xl font-bold text-gray-900 leading-none">{monthName}</h2>
+        <p className="text-sm text-gray-400 mt-1">{year}</p>
+      </div>
+
+      {/* Calendar card */}
+      <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+        {/* Day headers */}
+        <div className="grid grid-cols-7 border-b border-gray-100">
+          {DAY_NAMES_FULL.map((d, i) => (
+            <div key={d} className={`text-center text-xs font-semibold py-3 tracking-wider ${i === 2 ? "text-blue-500" : "text-gray-400"}`}>
+              {d}
+            </div>
+          ))}
+        </div>
+        {/* Day cells */}
+        <div className="grid grid-cols-7 divide-x divide-y divide-gray-100">
+          {cells.map((day, i) => {
+            if (!day) return <div key={`empty-${i}`} className="aspect-square sm:aspect-auto sm:min-h-[80px]" />;
+            const data = dayMap[day];
+            const hasAssignments = data && data.assignments.length > 0;
+            const bgColor = data?.color && data.color !== "#ffffff" ? data.color : undefined;
+            const isToday = isCurrentMonth && today.getDate() === day;
+
+            return (
+              <button
+                key={day}
+                onClick={() => editMode ? onEditDay(day) : onDayClick(day)}
+                className={`
+                  relative aspect-square sm:aspect-auto sm:min-h-[80px] flex flex-col items-start justify-start p-1.5 sm:p-3
+                  transition-colors hover:bg-blue-50 active:bg-blue-100
+                  ${bgColor ? "" : "bg-white"}
+                  ${editMode ? "ring-inset ring-1 ring-blue-200" : ""}
+                `}
+                style={bgColor ? { backgroundColor: bgColor } : {}}
+              >
+                <span className={`text-sm sm:text-base font-semibold leading-none ${isToday ? "text-blue-600 bg-blue-100 rounded-full w-7 h-7 flex items-center justify-center -mt-0.5 -ml-0.5" : "text-gray-800"}`}>
+                  {day}
+                </span>
+                {hasAssignments && (
+                  <div className="flex flex-col gap-0.5 mt-1 w-full hidden sm:flex">
+                    {data.assignments.slice(0, 2).map((a, idx) => (
+                      <div key={idx} className="text-xs text-blue-700 bg-blue-50 rounded px-1 py-0.5 truncate leading-tight">
+                        {a.title}
+                      </div>
+                    ))}
+                    {data.assignments.length > 2 && (
+                      <div className="text-xs text-gray-400">+{data.assignments.length - 2}</div>
+                    )}
+                  </div>
+                )}
+                {hasAssignments && (
+                  <div className="flex gap-0.5 mt-1 sm:hidden">
+                    {data.assignments.slice(0, 3).map((_, idx) => (
+                      <div key={idx} className="w-1 h-1 rounded-full bg-blue-500" />
+                    ))}
+                  </div>
+                )}
+                {editMode && (
+                  <div className="absolute top-0.5 right-0.5 text-blue-400 text-xs">✏️</div>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

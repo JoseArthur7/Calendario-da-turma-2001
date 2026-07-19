@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --color-light: #ffffff;
-  --color-dark: #171717;
+  --color-light: #f5f0e8;
+  --color-dark: #1a1a1a;
 }
 
 .accent-text {
