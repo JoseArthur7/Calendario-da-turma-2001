@@ -105,29 +105,37 @@ export default function Calendar() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col" style={{ background: "#f5f0e8" }}>
+    <div className="relative min-h-screen flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-20 px-5 py-3 flex items-center justify-between" style={{ background: "#f5f0e8" }}>
-        <h1 className="text-sm font-semibold text-gray-500 tracking-wide uppercase">📅 CEAM · AV3</h1>
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100 shadow-sm px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm shadow-md">
+            📅
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-gray-900 leading-tight">Calendário CEAM</h1>
+            <p className="text-xs text-gray-400 leading-tight">AV3 · 2026</p>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowEmails(true)}
-            className="px-4 py-1.5 rounded-full text-sm font-medium border border-blue-200 bg-white text-blue-600 hover:bg-blue-50 transition-colors shadow-sm"
+            className="px-3 py-1.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 transition-all shadow-sm hover:shadow-md"
           >
-            Emails
+            📧 Emails
           </button>
           {isOwner && (
             <button
               onClick={() => { setEditMode(!editMode); }}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${editMode ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200"}`}
+              className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${editMode ? "bg-indigo-600 text-white hover:bg-indigo-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
             >
-              {editMode ? "✏️ Editando" : "Ver"}
+              {editMode ? "✏️ Editando" : "👁 Ver"}
             </button>
           )}
           {isOwner && (
             <button
               onClick={() => { setIsOwner(false); setEditMode(false); }}
-              className="px-3 py-1.5 rounded-full text-sm bg-white text-gray-500 border border-gray-200"
+              className="px-3 py-1.5 rounded-xl text-sm bg-red-50 text-red-400 hover:bg-red-100 transition-colors"
             >
               Sair
             </button>
@@ -136,15 +144,15 @@ export default function Calendar() {
       </header>
 
       {/* Month tabs */}
-      <div className="px-5 py-2 flex gap-2 overflow-x-auto" style={{ background: "#f5f0e8" }}>
+      <div className="bg-white/60 backdrop-blur-sm border-b border-indigo-50 px-4 py-2.5 flex gap-2 overflow-x-auto hide-scrollbar">
         {MONTHS.map((m, i) => (
           <button
             key={m.month}
             onClick={() => scrollToMonth(i)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
+            className={`px-4 py-1.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
               currentMonthIndex === i
-                ? "bg-gray-900 text-white border-gray-900"
-                : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-200"
+                : "bg-white text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 border border-gray-100"
             }`}
           >
             {m.name}
@@ -266,76 +274,61 @@ function MonthView({
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
 
-  const DAY_NAMES_FULL = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
-
   return (
-    <div className="min-w-full snap-start flex flex-col px-4 pb-6">
-      {/* Big month title like the reference */}
-      <div className="mb-4 mt-2">
-        <h2 className="text-5xl font-bold text-gray-900 leading-none">{monthName}</h2>
-        <p className="text-sm text-gray-400 mt-1">{year}</p>
+    <div className="min-w-full snap-start flex flex-col p-4">
+      <div className="mb-5 text-center">
+        <h2 className="text-3xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          {monthName}
+        </h2>
+        <p className="text-sm text-gray-400 font-medium">{year}</p>
       </div>
+      {/* Day headers */}
+      <div className="grid grid-cols-7 mb-2 bg-white/60 rounded-xl px-1 py-1 border border-indigo-50">
+        {DAY_NAMES.map((d) => (
+          <div key={d} className="text-center text-xs font-bold text-indigo-400 py-1">
+            {d}
+          </div>
+        ))}
+      </div>
+      {/* Day cells */}
+      <div className="grid grid-cols-7 gap-1.5">
+        {cells.map((day, i) => {
+          if (!day) return <div key={`empty-${i}`} />;
+          const data = dayMap[day];
+          const hasAssignments = data && data.assignments.length > 0;
+          const bgColor = data?.color && data.color !== "#ffffff" ? data.color : undefined;
+          const isToday = isCurrentMonth && today.getDate() === day;
 
-      {/* Calendar card */}
-      <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-        {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-gray-100">
-          {DAY_NAMES_FULL.map((d, i) => (
-            <div key={d} className={`text-center text-xs font-semibold py-3 tracking-wider ${i === 2 ? "text-blue-500" : "text-gray-400"}`}>
-              {d}
-            </div>
-          ))}
-        </div>
-        {/* Day cells */}
-        <div className="grid grid-cols-7 divide-x divide-y divide-gray-100">
-          {cells.map((day, i) => {
-            if (!day) return <div key={`empty-${i}`} className="aspect-square sm:aspect-auto sm:min-h-[80px]" />;
-            const data = dayMap[day];
-            const hasAssignments = data && data.assignments.length > 0;
-            const bgColor = data?.color && data.color !== "#ffffff" ? data.color : undefined;
-            const isToday = isCurrentMonth && today.getDate() === day;
-
-            return (
-              <button
-                key={day}
-                onClick={() => editMode ? onEditDay(day) : onDayClick(day)}
-                className={`
-                  relative aspect-square sm:aspect-auto sm:min-h-[80px] flex flex-col items-start justify-start p-1.5 sm:p-3
-                  transition-colors hover:bg-blue-50 active:bg-blue-100
-                  ${bgColor ? "" : "bg-white"}
-                  ${editMode ? "ring-inset ring-1 ring-blue-200" : ""}
-                `}
-                style={bgColor ? { backgroundColor: bgColor } : {}}
-              >
-                <span className={`text-sm sm:text-base font-semibold leading-none ${isToday ? "text-blue-600 bg-blue-100 rounded-full w-7 h-7 flex items-center justify-center -mt-0.5 -ml-0.5" : "text-gray-800"}`}>
-                  {day}
-                </span>
-                {hasAssignments && (
-                  <div className="flex flex-col gap-0.5 mt-1 w-full hidden sm:flex">
-                    {data.assignments.slice(0, 2).map((a, idx) => (
-                      <div key={idx} className="text-xs text-blue-700 bg-blue-50 rounded px-1 py-0.5 truncate leading-tight">
-                        {a.title}
-                      </div>
-                    ))}
-                    {data.assignments.length > 2 && (
-                      <div className="text-xs text-gray-400">+{data.assignments.length - 2}</div>
-                    )}
-                  </div>
-                )}
-                {hasAssignments && (
-                  <div className="flex gap-0.5 mt-1 sm:hidden">
-                    {data.assignments.slice(0, 3).map((_, idx) => (
-                      <div key={idx} className="w-1 h-1 rounded-full bg-blue-500" />
-                    ))}
-                  </div>
-                )}
-                {editMode && (
-                  <div className="absolute top-0.5 right-0.5 text-blue-400 text-xs">✏️</div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+          return (
+            <button
+              key={day}
+              onClick={() => editMode ? onEditDay(day) : onDayClick(day)}
+              className={`
+                day-cell relative aspect-square flex flex-col items-center justify-start pt-1.5 rounded-xl text-sm font-medium
+                transition-all duration-200 hover:scale-105 active:scale-95
+                ${isToday ? "ring-2 ring-indigo-400 today-pulse" : ""}
+                ${bgColor ? "border border-white/60" : "bg-white/80 hover:bg-white border border-indigo-50 hover:border-indigo-200"}
+                ${editMode ? "ring-1 ring-indigo-200" : ""}
+                shadow-sm
+              `}
+              style={bgColor ? { backgroundColor: bgColor } : {}}
+            >
+              <span className={`text-xs font-bold ${isToday ? "text-indigo-600" : "text-gray-700"}`}>
+                {day}
+              </span>
+              {hasAssignments && (
+                <div className="flex flex-wrap justify-center gap-0.5 mt-1">
+                  {data.assignments.slice(0, 3).map((_, idx) => (
+                    <div key={idx} className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400" />
+                  ))}
+                </div>
+              )}
+              {editMode && (
+                <div className="absolute top-0.5 right-0.5 text-indigo-300 text-xs">✏️</div>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -356,23 +349,26 @@ function DayModal({
   const monthName = MONTHS.find((m) => m.month === month)?.name ?? "";
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[80vh] flex flex-col"
+        className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-5 py-5 flex items-center justify-between">
           {selectedAssignment ? (
-            <button onClick={onBackFromAssignment} className="text-indigo-600 font-medium flex items-center gap-1">
+            <button onClick={onBackFromAssignment} className="text-white/90 font-semibold flex items-center gap-1 hover:text-white transition-colors">
               ← Voltar
             </button>
           ) : (
-            <h3 className="text-lg font-bold text-gray-800">
-              {monthName} {day}, {year}
-            </h3>
+            <div>
+              <h3 className="text-xl font-bold text-white">
+                {day} de {monthName}
+              </h3>
+              <p className="text-indigo-200 text-sm">{year}</p>
+            </div>
           )}
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+          <button onClick={onClose} className="text-white/70 hover:text-white text-xl leading-none w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">✕</button>
         </div>
 
         {/* Content */}
@@ -399,23 +395,29 @@ function AssignmentList({
   }
   if (!dayData || dayData.assignments.length === 0) {
     return (
-      <div className="text-center py-10 text-gray-400">
-        <div className="text-4xl mb-2">📭</div>
-        <p className="text-sm">Nada nesse dia</p>
+      <div className="text-center py-12 text-gray-400">
+        <div className="text-5xl mb-3">📭</div>
+        <p className="text-sm font-medium">Nenhuma atividade nesse dia</p>
+        <p className="text-xs text-gray-300 mt-1">Aproveite a folga! 🎉</p>
       </div>
     );
   }
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs text-gray-400 uppercase font-semibold mb-1">Atividades</p>
-      {dayData.assignments.map((a) => (
+      <p className="text-xs text-indigo-400 uppercase font-bold mb-2 tracking-wider">Atividades</p>
+      {dayData.assignments.map((a, idx) => (
         <button
           key={a.id}
           onClick={() => onSelect(a)}
-          className="w-full text-left px-4 py-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-colors flex items-center justify-between group"
+          className="w-full text-left px-4 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 border border-indigo-100 transition-all flex items-center justify-between group shadow-sm hover:shadow"
         >
-          <span className="font-medium text-gray-800">{a.title}</span>
-          <span className="text-indigo-400 group-hover:translate-x-1 transition-transform">→</span>
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+              {idx + 1}
+            </div>
+            <span className="font-semibold text-gray-800">{a.title}</span>
+          </div>
+          <span className="text-indigo-400 group-hover:translate-x-1 transition-transform text-lg">→</span>
         </button>
       ))}
     </div>
@@ -425,9 +427,17 @@ function AssignmentList({
 function AssignmentDetail({ assignment }: { assignment: Assignment }) {
   return (
     <div>
-      <h4 className="text-xl font-bold text-gray-800 mb-3">{assignment.title}</h4>
-      <div className="prose prose-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
-        {assignment.description || <span className="text-gray-400 italic">Sem descrição.</span>}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-lg shadow-md">
+          📝
+        </div>
+        <h4 className="text-xl font-bold text-gray-800">{assignment.title}</h4>
+      </div>
+      <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
+        <p className="text-xs text-indigo-400 uppercase font-bold mb-2 tracking-wider">Descrição</p>
+        <div className="prose prose-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
+          {assignment.description || <span className="text-gray-400 italic">Sem descrição.</span>}
+        </div>
       </div>
     </div>
   );
@@ -590,24 +600,36 @@ const PROFESSORS = [
 
 function EmailsModal({ onClose }: { onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col"
+        className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h3 className="text-lg font-bold text-gray-800">📧 Emails dos Professores</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-5 py-5 flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-white">Emails dos Professores</h3>
+            <p className="text-blue-200 text-sm">Clique para enviar uma mensagem</p>
+          </div>
+          <button onClick={onClose} className="text-white/70 hover:text-white text-xl w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">✕</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-2.5">
           {PROFESSORS.map((p) => (
-            <div key={p.email} className="border rounded-xl p-3 bg-gray-50">
-              <p className="font-semibold text-gray-800 text-sm">{p.name}</p>
-              <a href={`mailto:${p.email}`} className="text-blue-600 hover:underline text-sm">{p.email}</a>
-            </div>
+            <a
+              key={p.email}
+              href={`mailto:${p.email}`}
+              className="flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 hover:from-blue-100 hover:to-indigo-100 transition-all shadow-sm hover:shadow group"
+            >
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
+                {p.name[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800 text-sm">{p.name}</p>
+                <p className="text-blue-500 text-xs truncate">{p.email}</p>
+              </div>
+              <span className="text-blue-300 group-hover:translate-x-1 transition-transform text-lg">→</span>
+            </a>
           ))}
-          <p className="text-xs text-center text-gray-400 mt-2">Clique no email para enviar uma mensagem.</p>
         </div>
       </div>
     </div>
