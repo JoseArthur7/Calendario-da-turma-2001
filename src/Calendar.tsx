@@ -1,29 +1,60 @@
-import { useState, useRef, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../convex/_generated/api";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 
+const SHEET_ID = "1YGSZ7rJkSkhyb0OFkMVxRht-4L6tXlgDN3vRELJuzIo";
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+
 const MONTHS = [
-  { month: 4, name: "Abril", year: 2026 },
-  { month: 6, name: "Junho", year: 2026 },
-  { month: 9, name: "Setembro", year: 2026 },
+  { month: 8,  name: "Agosto",   year: 2026 },
+  { month: 9,  name: "Setembro", year: 2026 },
+  { month: 10, name: "Outubro",  year: 2026 },
   { month: 11, name: "Novembro", year: 2026 },
+  { month: 12, name: "Dezembro", year: 2026 },
 ];
 
-const DAY_NAMES = ["Dom", "Seg", "Ter", "Quar", "Quin", "Sex", "Sab"];
+const MONTH_NAMES: Record<number, string> = {
+  8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
+};
+
+const DAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 const PRESET_COLORS = [
-  { label: "White", value: "#ffffff" },
-  { label: "Red", value: "#fecaca" },
+  { label: "White",  value: "#ffffff" },
+  { label: "Red",    value: "#fecaca" },
   { label: "Orange", value: "#fed7aa" },
   { label: "Yellow", value: "#fef08a" },
-  { label: "Green", value: "#bbf7d0" },
-  { label: "Blue", value: "#bfdbfe" },
+  { label: "Green",  value: "#bbf7d0" },
+  { label: "Blue",   value: "#bfdbfe" },
   { label: "Purple", value: "#e9d5ff" },
-  { label: "Pink", value: "#fbcfe8" },
-  { label: "Teal", value: "#99f6e4" },
-  { label: "Gray", value: "#e5e7eb" },
+  { label: "Pink",   value: "#fbcfe8" },
+  { label: "Teal",   value: "#99f6e4" },
+  { label: "Gray",   value: "#e5e7eb" },
 ];
+
+const PROFESSORS = [
+  { name: "Marcia",             email: "marma.jual@gmail.com" },
+  { name: "Kacielly",          email: "kaciellylima@gmail.com" },
+  { name: "Rodrigo Geografia",  email: "RodrigoGeo2014@gmail.com" },
+  { name: "Rodrigo Literatura", email: "rodmartins1922@gmail.com" },
+  { name: "Christian",         email: "christian.gomes.1993@gmail.com" },
+  { name: "Tatiana",           email: "tatiana.besada@gmail.com" },
+  { name: "Limarcos",          email: "limarcos.ferreira@gmail.com" },
+  { name: "Diego",             email: "bottinodiego@gmail.com" },
+  { name: "Lais",              email: "laispaivar@gmail.com" },
+];
+
+const OWNER_PASSWORD = "jose";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Assignment = { id: string; title: string; description: string };
+type DayKey = string; // "year-month-day"
+type SheetData = Record<DayKey, Assignment[]>;
+type ColorData = Record<DayKey, string>;
+
+function dayKey(year: number, month: number, day: number) {
+  return `${year}-${month}-${day}`;
+}
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
@@ -33,17 +64,43 @@ function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month - 1, 1).getDay();
 }
 
-type Assignment = { id: string; title: string; description: string };
-type DayData = {
-  _id: string;
-  year: number;
-  month: number;
-  day: number;
-  color?: string;
-  assignments: Assignment[];
-} | null | undefined;
+// ─── CSV Parser ───────────────────────────────────────────────────────────────
 
-const OWNER_PASSWORD = "jose";
+function parseCSV(csv: string): SheetData {
+  const lines = csv.trim().split("\n");
+  const data: SheetData = {};
+  // skip header row (index 0)
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    // simple CSV parse — handle quoted fields
+    const cols: string[] = [];
+    let cur = "";
+    let inQuote = false;
+    for (let c = 0; c < line.length; c++) {
+      const ch = line[c];
+      if (ch === '"') { inQuote = !inQuote; }
+      else if (ch === "," && !inQuote) { cols.push(cur.trim()); cur = ""; }
+      else { cur += ch; }
+    }
+    cols.push(cur.trim());
+
+    const year = parseInt(cols[0]);
+    const month = parseInt(cols[1]);
+    const day = parseInt(cols[2]);
+    const title = (cols[3] ?? "").replace(/^"|"$/g, "").trim();
+    const description = (cols[4] ?? "").replace(/^"|"$/g, "").trim();
+
+    if (!year || !month || !day || !title) continue;
+
+    const key = dayKey(year, month, day);
+    if (!data[key]) data[key] = [];
+    data[key].push({ id: `${key}-${data[key].length}`, title, description });
+  }
+  return data;
+}
+
+// ─── Main Calendar ────────────────────────────────────────────────────────────
 
 export default function Calendar() {
   const [currentMonthIndex, setCurrentMonthIndex] = useState(0);
@@ -56,11 +113,36 @@ export default function Calendar() {
   const [editingDay, setEditingDay] = useState<{ year: number; month: number; day: number } | null>(null);
   const [showEmails, setShowEmails] = useState(false);
 
+  // Google Sheets data
+  const [sheetData, setSheetData] = useState<SheetData>({});
+  const [colorData, setColorData] = useState<ColorData>(() => {
+    try { return JSON.parse(localStorage.getItem("ceam_colors") ?? "{}"); } catch { return {}; }
+  });
+  const [loading, setLoading] = useState(true);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const hiddenButtonClickCount = useRef(0);
   const hiddenButtonTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const upsertDayData = useMutation(api.calendar.upsertDayData);
+  // Fetch Google Sheets data
+  const fetchSheetData = useCallback(async () => {
+    try {
+      const res = await fetch(SHEET_URL);
+      const csv = await res.text();
+      setSheetData(parseCSV(csv));
+    } catch (e) {
+      toast.error("Erro ao carregar dados da planilha.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSheetData();
+    // auto-refresh every 60s
+    const interval = setInterval(fetchSheetData, 60000);
+    return () => clearInterval(interval);
+  }, [fetchSheetData]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -83,9 +165,7 @@ export default function Calendar() {
   const handleHiddenButtonClick = () => {
     hiddenButtonClickCount.current += 1;
     if (hiddenButtonTimer.current) clearTimeout(hiddenButtonTimer.current);
-    hiddenButtonTimer.current = setTimeout(() => {
-      hiddenButtonClickCount.current = 0;
-    }, 2000);
+    hiddenButtonTimer.current = setTimeout(() => { hiddenButtonClickCount.current = 0; }, 2000);
     if (hiddenButtonClickCount.current >= 1) {
       setShowOwnerLogin(true);
       hiddenButtonClickCount.current = 0;
@@ -104,6 +184,13 @@ export default function Calendar() {
     }
   };
 
+  const saveColor = (year: number, month: number, day: number, color: string) => {
+    const key = dayKey(year, month, day);
+    const updated = { ...colorData, [key]: color };
+    setColorData(updated);
+    localStorage.setItem("ceam_colors", JSON.stringify(updated));
+  };
+
   return (
     <div className="relative min-h-screen flex flex-col">
       {/* Header */}
@@ -114,10 +201,17 @@ export default function Calendar() {
           </div>
           <div>
             <h1 className="text-base font-bold text-gray-900 leading-tight">Calendário CEAM</h1>
-            <p className="text-xs text-gray-400 leading-tight">AV3 · 2026</p>
+            <p className="text-xs text-gray-400 leading-tight">Trabalhos · 2026</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={fetchSheetData}
+            className="px-2 py-1.5 rounded-xl text-sm text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 transition-all"
+            title="Atualizar"
+          >
+            🔄
+          </button>
           <button
             onClick={() => setShowEmails(true)}
             className="px-3 py-1.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 transition-all shadow-sm hover:shadow-md"
@@ -126,7 +220,7 @@ export default function Calendar() {
           </button>
           {isOwner && (
             <button
-              onClick={() => { setEditMode(!editMode); }}
+              onClick={() => setEditMode(!editMode)}
               className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${editMode ? "bg-indigo-600 text-white hover:bg-indigo-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
             >
               {editMode ? "✏️ Editando" : "👁 Ver"}
@@ -160,6 +254,13 @@ export default function Calendar() {
         ))}
       </div>
 
+      {/* Loading bar */}
+      {loading && (
+        <div className="h-0.5 bg-indigo-100 overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-indigo-400 to-purple-400 animate-pulse w-full" />
+        </div>
+      )}
+
       {/* Calendar scroll container */}
       <div
         ref={scrollRef}
@@ -174,6 +275,8 @@ export default function Calendar() {
             month={m.month}
             monthName={m.name}
             editMode={editMode}
+            sheetData={sheetData}
+            colorData={colorData}
             onDayClick={(day) => {
               setSelectedDay({ year: m.year, month: m.month, day });
               setSelectedAssignment(null);
@@ -183,10 +286,10 @@ export default function Calendar() {
         ))}
       </div>
 
-      {/* Hidden owner button - bottom left corner */}
+      {/* Hidden owner button */}
       <button
         onClick={handleHiddenButtonClick}
-        className="fixed bottom-4 left-4 w-6 h-6 rounded-full bg-blue-600 opacity-20 hover:opacity-40 transition-opacity z-50"
+        className="fixed bottom-4 left-4 w-6 h-6 rounded-full bg-indigo-600 opacity-20 hover:opacity-40 transition-opacity z-50"
         aria-label="Owner access"
       />
 
@@ -196,6 +299,7 @@ export default function Calendar() {
           year={selectedDay.year}
           month={selectedDay.month}
           day={selectedDay.day}
+          sheetData={sheetData}
           onClose={() => { setSelectedDay(null); setSelectedAssignment(null); }}
           selectedAssignment={selectedAssignment}
           onSelectAssignment={setSelectedAssignment}
@@ -203,28 +307,25 @@ export default function Calendar() {
         />
       )}
 
-      {/* Edit day modal */}
+      {/* Edit day modal (colors only — assignments managed via Sheets) */}
       {editingDay && (
         <EditDayModal
           year={editingDay.year}
           month={editingDay.month}
           day={editingDay.day}
+          colorData={colorData}
           onClose={() => setEditingDay(null)}
-          upsertDayData={upsertDayData}
+          onSaveColor={saveColor}
         />
       )}
 
       {/* Emails modal */}
-      {showEmails && (
-        <EmailsModal
-          onClose={() => setShowEmails(false)}
-        />
-      )}
+      {showEmails && <EmailsModal onClose={() => setShowEmails(false)} />}
 
       {/* Owner login modal */}
       {showOwnerLogin && (
         <Modal onClose={() => { setShowOwnerLogin(false); setOwnerPasswordInput(""); }}>
-          <h2 className="text-lg font-bold mb-4 text-gray-800">Editar</h2>
+          <h2 className="text-lg font-bold mb-4 text-gray-800">Modo Edição</h2>
           <input
             type="password"
             placeholder="Senha"
@@ -249,24 +350,17 @@ export default function Calendar() {
 // ─── Month View ───────────────────────────────────────────────────────────────
 
 function MonthView({
-  year, month, monthName, editMode, onDayClick, onEditDay,
+  year, month, monthName, editMode, sheetData, colorData, onDayClick, onEditDay,
 }: {
   year: number; month: number; monthName: string;
   editMode: boolean;
+  sheetData: SheetData;
+  colorData: ColorData;
   onDayClick: (day: number) => void;
   onEditDay: (day: number) => void;
 }) {
-  const monthData = useQuery(api.calendar.getMonthData, { year, month });
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
-
-  const dayMap: Record<number, { color?: string; assignments: Assignment[] }> = {};
-  if (monthData) {
-    for (const d of monthData) {
-      dayMap[d.day] = { color: d.color, assignments: d.assignments };
-    }
-  }
-
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
@@ -282,21 +376,18 @@ function MonthView({
         </h2>
         <p className="text-sm text-gray-400 font-medium">{year}</p>
       </div>
-      {/* Day headers */}
       <div className="grid grid-cols-7 mb-2 bg-white/60 rounded-xl px-1 py-1 border border-indigo-50">
         {DAY_NAMES.map((d) => (
-          <div key={d} className="text-center text-xs font-bold text-indigo-400 py-1">
-            {d}
-          </div>
+          <div key={d} className="text-center text-xs font-bold text-indigo-400 py-1">{d}</div>
         ))}
       </div>
-      {/* Day cells */}
       <div className="grid grid-cols-7 gap-1.5">
         {cells.map((day, i) => {
           if (!day) return <div key={`empty-${i}`} />;
-          const data = dayMap[day];
-          const hasAssignments = data && data.assignments.length > 0;
-          const bgColor = data?.color && data.color !== "#ffffff" ? data.color : undefined;
+          const key = dayKey(year, month, day);
+          const assignments = sheetData[key] ?? [];
+          const hasAssignments = assignments.length > 0;
+          const bgColor = colorData[key] && colorData[key] !== "#ffffff" ? colorData[key] : undefined;
           const isToday = isCurrentMonth && today.getDate() === day;
 
           return (
@@ -318,13 +409,13 @@ function MonthView({
               </span>
               {hasAssignments && (
                 <div className="flex flex-wrap justify-center gap-0.5 mt-1">
-                  {data.assignments.slice(0, 3).map((_, idx) => (
+                  {assignments.slice(0, 3).map((_, idx) => (
                     <div key={idx} className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400" />
                   ))}
                 </div>
               )}
               {editMode && (
-                <div className="absolute top-0.5 right-0.5 text-indigo-300 text-xs">✏️</div>
+                <div className="absolute top-0.5 right-0.5 text-indigo-300 text-xs">🎨</div>
               )}
             </button>
           );
@@ -337,16 +428,17 @@ function MonthView({
 // ─── Day Modal ────────────────────────────────────────────────────────────────
 
 function DayModal({
-  year, month, day, onClose, selectedAssignment, onSelectAssignment, onBackFromAssignment,
+  year, month, day, sheetData, onClose, selectedAssignment, onSelectAssignment, onBackFromAssignment,
 }: {
   year: number; month: number; day: number;
+  sheetData: SheetData;
   onClose: () => void;
   selectedAssignment: Assignment | null;
   onSelectAssignment: (a: Assignment) => void;
   onBackFromAssignment: () => void;
 }) {
-  const dayData = useQuery(api.calendar.getDayData, { year, month, day });
-  const monthName = MONTHS.find((m) => m.month === month)?.name ?? "";
+  const monthName = MONTH_NAMES[month] ?? "";
+  const assignments = sheetData[dayKey(year, month, day)] ?? [];
 
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
@@ -354,7 +446,6 @@ function DayModal({
         className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-5 py-5 flex items-center justify-between">
           {selectedAssignment ? (
             <button onClick={onBackFromAssignment} className="text-white/90 font-semibold flex items-center gap-1 hover:text-white transition-colors">
@@ -362,21 +453,17 @@ function DayModal({
             </button>
           ) : (
             <div>
-              <h3 className="text-xl font-bold text-white">
-                {day} de {monthName}
-              </h3>
+              <h3 className="text-xl font-bold text-white">{day} de {monthName}</h3>
               <p className="text-indigo-200 text-sm">{year}</p>
             </div>
           )}
-          <button onClick={onClose} className="text-white/70 hover:text-white text-xl leading-none w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">✕</button>
+          <button onClick={onClose} className="text-white/70 hover:text-white text-xl w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">✕</button>
         </div>
-
-        {/* Content */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {selectedAssignment ? (
             <AssignmentDetail assignment={selectedAssignment} />
           ) : (
-            <AssignmentList dayData={dayData} onSelect={onSelectAssignment} />
+            <AssignmentList assignments={assignments} onSelect={onSelectAssignment} />
           )}
         </div>
       </div>
@@ -384,16 +471,8 @@ function DayModal({
   );
 }
 
-function AssignmentList({
-  dayData, onSelect,
-}: {
-  dayData: DayData;
-  onSelect: (a: Assignment) => void;
-}) {
-  if (dayData === undefined) {
-    return <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500" /></div>;
-  }
-  if (!dayData || dayData.assignments.length === 0) {
+function AssignmentList({ assignments, onSelect }: { assignments: Assignment[]; onSelect: (a: Assignment) => void }) {
+  if (assignments.length === 0) {
     return (
       <div className="text-center py-12 text-gray-400">
         <div className="text-5xl mb-3">📭</div>
@@ -405,7 +484,7 @@ function AssignmentList({
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs text-indigo-400 uppercase font-bold mb-2 tracking-wider">Atividades</p>
-      {dayData.assignments.map((a, idx) => (
+      {assignments.map((a, idx) => (
         <button
           key={a.id}
           onClick={() => onSelect(a)}
@@ -443,140 +522,59 @@ function AssignmentDetail({ assignment }: { assignment: Assignment }) {
   );
 }
 
-// ─── Edit Day Modal ───────────────────────────────────────────────────────────
+// ─── Edit Day Modal (colors only) ─────────────────────────────────────────────
 
 function EditDayModal({
-  year, month, day, onClose, upsertDayData,
+  year, month, day, colorData, onClose, onSaveColor,
 }: {
   year: number; month: number; day: number;
+  colorData: ColorData;
   onClose: () => void;
-  upsertDayData: any;
+  onSaveColor: (year: number, month: number, day: number, color: string) => void;
 }) {
-  const dayData = useQuery(api.calendar.getDayData, { year, month, day });
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [color, setColor] = useState("#ffffff");
-  const [loaded, setLoaded] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const monthName = MONTHS.find((m) => m.month === month)?.name ?? "";
+  const monthName = MONTH_NAMES[month] ?? "";
+  const key = dayKey(year, month, day);
+  const [color, setColor] = useState(colorData[key] ?? "#ffffff");
 
-  useEffect(() => {
-    if (dayData !== undefined && !loaded) {
-      setAssignments(dayData?.assignments ?? []);
-      setColor(dayData?.color ?? "#ffffff");
-      setLoaded(true);
-    }
-  }, [dayData, loaded]);
-
-  const addAssignment = () => {
-    setAssignments((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), title: "", description: "" },
-    ]);
-  };
-
-  const updateAssignment = (id: string, field: "title" | "description", value: string) => {
-    setAssignments((prev) => prev.map((a) => (a.id === id ? { ...a, [field]: value } : a)));
-  };
-
-  const removeAssignment = (id: string) => {
-    setAssignments((prev) => prev.filter((a) => a.id !== id));
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await upsertDayData({
-        year, month, day,
-        color: color === "#ffffff" ? undefined : color,
-        assignments: assignments.filter((a) => a.title.trim()),
-        ownerPassword: OWNER_PASSWORD,
-      });
-      toast.success("Salvo!");
-      onClose();
-    } catch (e: any) {
-      toast.error(e.message ?? "Erro ao salvar");
-    } finally {
-      setSaving(false);
-    }
+  const handleSave = () => {
+    onSaveColor(year, month, day, color);
+    toast.success("Cor salva!");
+    onClose();
   };
 
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90vh] flex flex-col"
+        className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h3 className="text-lg font-bold text-gray-800">Editar: {monthName} {day}</h3>
+          <h3 className="text-lg font-bold text-gray-800">🎨 Cor: {monthName} {day}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
         </div>
-
-        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5">
-          {/* Color picker */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Cor do Dia</p>
-            <div className="flex flex-wrap gap-2">
-              {PRESET_COLORS.map((c) => (
-                <button
-                  key={c.value}
-                  onClick={() => setColor(c.value)}
-                  title={c.label}
-                  className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
-                    color === c.value ? "border-indigo-600 scale-110" : "border-gray-300"
-                  }`}
-                  style={{ backgroundColor: c.value }}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Assignments */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Atividades</p>
-            <div className="flex flex-col gap-3">
-              {assignments.map((a) => (
-                <div key={a.id} className="border rounded-xl p-3 bg-gray-50 flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Título da atividade"
-                      value={a.title}
-                      onChange={(e) => updateAssignment(a.id, "title", e.target.value)}
-                      className="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                    />
-                    <button
-                      onClick={() => removeAssignment(a.id)}
-                      className="text-red-400 hover:text-red-600 text-lg leading-none"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <textarea
-                    placeholder="Descrição (opcional)"
-                    value={a.description}
-                    onChange={(e) => updateAssignment(a.id, "description", e.target.value)}
-                    rows={3}
-                    className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
-                  />
-                </div>
-              ))}
+        <div className="px-5 py-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Escolha uma cor</p>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {PRESET_COLORS.map((c) => (
               <button
-                onClick={addAssignment}
-                className="flex items-center justify-center gap-2 border-2 border-dashed border-indigo-300 rounded-xl py-2.5 text-indigo-500 hover:bg-indigo-50 transition-colors text-sm font-medium"
-              >
-                + Adicionar Atividade
-              </button>
-            </div>
+                key={c.value}
+                onClick={() => setColor(c.value)}
+                title={c.label}
+                className={`w-9 h-9 rounded-full border-2 transition-transform hover:scale-110 ${
+                  color === c.value ? "border-indigo-600 scale-110" : "border-gray-300"
+                }`}
+                style={{ backgroundColor: c.value }}
+              />
+            ))}
           </div>
-        </div>
-
-        <div className="px-5 py-4 border-t">
+          <p className="text-xs text-gray-400 mb-4">
+            💡 Para adicionar atividades, edite a planilha do Google Sheets.
+          </p>
           <button
             onClick={handleSave}
-            disabled={saving}
-            className="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            className="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
           >
-            {saving ? "Salvando…" : "Salvar"}
+            Salvar cor
           </button>
         </div>
       </div>
@@ -584,19 +582,7 @@ function EditDayModal({
   );
 }
 
-// ─── Emails Modal ────────────────────────────────────────────────────────────
-
-const PROFESSORS = [
-  { name: "Marcia",             email: "marma.jual@gmail.com" },
-  { name: "Kacielly",           email: "kaciellylima@gmail.com" },
-  { name: "Rodrigo Geografia",  email: "RodrigoGeo2014@gmail.com" },
-  { name: "Rodrigo Literatura", email: "rodmartins1922@gmail.com" },
-  { name: "Christian",          email: "christian.gomes.1993@gmail.com" },
-  { name: "Tatiana",            email: "tatiana.besada@gmail.com" },
-  { name: "Limarcos",           email: "limarcos.ferreira@gmail.com" },
-  { name: "Diego",              email: "bottinodiego@gmail.com" },
-  { name: "Lais",               email: "laispaivar@gmail.com" },
-];
+// ─── Emails Modal ─────────────────────────────────────────────────────────────
 
 function EmailsModal({ onClose }: { onClose: () => void }) {
   return (
@@ -612,7 +598,6 @@ function EmailsModal({ onClose }: { onClose: () => void }) {
           </div>
           <button onClick={onClose} className="text-white/70 hover:text-white text-xl w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">✕</button>
         </div>
-
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-2.5">
           {PROFESSORS.map((p) => (
             <a
@@ -641,10 +626,7 @@ function EmailsModal({ onClose }: { onClose: () => void }) {
 function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
     </div>
