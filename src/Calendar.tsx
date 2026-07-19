@@ -45,6 +45,85 @@ const PROFESSORS = [
 
 const OWNER_PASSWORD = "jose";
 
+// ─── Themes ───────────────────────────────────────────────────────────────────
+
+const THEMES = [
+  {
+    name: "azul",
+    icon: "🔄",
+    from:   "#6366f1",
+    to:     "#a855f7",
+    tab:    "from-indigo-500 to-purple-500",
+    header: "from-indigo-500 to-purple-600",
+    emailHeader: "from-blue-500 to-indigo-600",
+    dot:    "from-indigo-400 to-purple-400",
+    badge:  "from-blue-500 to-indigo-500",
+    text:   "from-indigo-600 to-purple-600",
+    ring:   "ring-indigo-400",
+    bg:     "linear-gradient(135deg,#f0f4ff 0%,#faf5ff 50%,#f0f9ff 100%)",
+  },
+  {
+    name: "vermelho",
+    icon: "🔄",
+    from:   "#ef4444",
+    to:     "#f97316",
+    tab:    "from-red-500 to-orange-500",
+    header: "from-red-500 to-orange-600",
+    emailHeader: "from-red-500 to-orange-500",
+    dot:    "from-red-400 to-orange-400",
+    badge:  "from-red-500 to-orange-500",
+    text:   "from-red-600 to-orange-600",
+    ring:   "ring-red-400",
+    bg:     "linear-gradient(135deg,#fff1f2 0%,#fff7ed 50%,#fef9f0 100%)",
+  },
+  {
+    name: "amarelo",
+    icon: "🔄",
+    from:   "#eab308",
+    to:     "#84cc16",
+    tab:    "from-yellow-500 to-lime-500",
+    header: "from-yellow-500 to-lime-500",
+    emailHeader: "from-yellow-500 to-lime-500",
+    dot:    "from-yellow-400 to-lime-400",
+    badge:  "from-yellow-500 to-lime-500",
+    text:   "from-yellow-600 to-lime-600",
+    ring:   "ring-yellow-400",
+    bg:     "linear-gradient(135deg,#fefce8 0%,#f7fee7 50%,#fefce8 100%)",
+  },
+  {
+    name: "roxo",
+    icon: "🔄",
+    from:   "#8b5cf6",
+    to:     "#ec4899",
+    tab:    "from-violet-500 to-pink-500",
+    header: "from-violet-500 to-pink-600",
+    emailHeader: "from-violet-500 to-pink-500",
+    dot:    "from-violet-400 to-pink-400",
+    badge:  "from-violet-500 to-pink-500",
+    text:   "from-violet-600 to-pink-600",
+    ring:   "ring-violet-400",
+    bg:     "linear-gradient(135deg,#f5f3ff 0%,#fdf4ff 50%,#fdf2f8 100%)",
+  },
+  {
+    name: "preto",
+    icon: "🔄",
+    from:   "#1f2937",
+    to:     "#374151",
+    tab:    "from-gray-700 to-gray-900",
+    header: "from-gray-800 to-gray-900",
+    emailHeader: "from-gray-700 to-gray-900",
+    dot:    "from-gray-500 to-gray-700",
+    badge:  "from-gray-700 to-gray-900",
+    text:   "from-gray-700 to-gray-900",
+    ring:   "ring-gray-500",
+    bg:     "linear-gradient(135deg,#f9fafb 0%,#f3f4f6 50%,#f1f5f9 100%)",
+  },
+];
+
+type Theme = typeof THEMES[0];
+
+
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Assignment = { id: string; title: string; description: string };
@@ -64,16 +143,35 @@ function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month - 1, 1).getDay();
 }
 
+// ─── Color name → hex ────────────────────────────────────────────────────────
+
+const COLOR_MAP: Record<string, string> = {
+  vermelho: "#fecaca",
+  laranja:  "#fed7aa",
+  amarelo:  "#fef08a",
+  verde:    "#bbf7d0",
+  azul:     "#bfdbfe",
+  roxo:     "#e9d5ff",
+  rosa:     "#fbcfe8",
+  turquesa: "#99f6e4",
+  cinza:    "#e5e7eb",
+};
+
+function resolveColor(raw: string): string | undefined {
+  const key = raw.toLowerCase().trim();
+  return COLOR_MAP[key] ?? (raw.startsWith("#") ? raw : undefined);
+}
+
 // ─── CSV Parser ───────────────────────────────────────────────────────────────
 
-function parseCSV(csv: string): SheetData {
+function parseCSV(csv: string): { sheetData: SheetData; sheetColors: ColorData } {
   const lines = csv.trim().split("\n");
-  const data: SheetData = {};
-  // skip header row (index 0)
+  const sheetData: SheetData = {};
+  const sheetColors: ColorData = {};
+
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim()) continue;
-    // simple CSV parse — handle quoted fields
     const cols: string[] = [];
     let cur = "";
     let inQuote = false;
@@ -85,51 +183,69 @@ function parseCSV(csv: string): SheetData {
     }
     cols.push(cur.trim());
 
-    const year = parseInt(cols[0]);
+    const year  = parseInt(cols[0]);
     const month = parseInt(cols[1]);
-    const day = parseInt(cols[2]);
-    const title = (cols[3] ?? "").replace(/^"|"$/g, "").trim();
+    const day   = parseInt(cols[2]);
+    const title       = (cols[3] ?? "").replace(/^"|"$/g, "").trim();
     const description = (cols[4] ?? "").replace(/^"|"$/g, "").trim();
+    const colorRaw    = (cols[5] ?? "").replace(/^"|"$/g, "").trim();
 
-    if (!year || !month || !day || !title) continue;
+    if (!year || !month || !day) continue;
 
     const key = dayKey(year, month, day);
-    if (!data[key]) data[key] = [];
-    data[key].push({ id: `${key}-${data[key].length}`, title, description });
+
+    // color (one per day — last non-empty wins)
+    if (colorRaw) {
+      const hex = resolveColor(colorRaw);
+      if (hex) sheetColors[key] = hex;
+    }
+
+    // assignment (skip if no title)
+    if (title) {
+      if (!sheetData[key]) sheetData[key] = [];
+      sheetData[key].push({ id: `${key}-${sheetData[key].length}`, title, description });
+    }
   }
-  return data;
+  return { sheetData, sheetColors };
 }
 
 // ─── Main Calendar ────────────────────────────────────────────────────────────
 
 export default function Calendar() {
   const [currentMonthIndex, setCurrentMonthIndex] = useState(0);
+  const [themeIdx, setThemeIdx] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem("ceam_theme") ?? "0"); } catch { return 0; }
+  });
+  const theme = THEMES[themeIdx % THEMES.length];
+
+  const cycleTheme = () => {
+    const next = (themeIdx + 1) % THEMES.length;
+    setThemeIdx(next);
+    localStorage.setItem("ceam_theme", String(next));
+  };
   const [selectedDay, setSelectedDay] = useState<{ year: number; month: number; day: number } | null>(null);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [showOwnerLogin, setShowOwnerLogin] = useState(false);
   const [ownerPasswordInput, setOwnerPasswordInput] = useState("");
   const [editMode, setEditMode] = useState(false);
-  const [editingDay, setEditingDay] = useState<{ year: number; month: number; day: number } | null>(null);
   const [showEmails, setShowEmails] = useState(false);
 
   // Google Sheets data
   const [sheetData, setSheetData] = useState<SheetData>({});
-  const [colorData, setColorData] = useState<ColorData>(() => {
-    try { return JSON.parse(localStorage.getItem("ceam_colors") ?? "{}"); } catch { return {}; }
-  });
+  const [sheetColors, setSheetColors] = useState<ColorData>({});
   const [loading, setLoading] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const hiddenButtonClickCount = useRef(0);
-  const hiddenButtonTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch Google Sheets data
   const fetchSheetData = useCallback(async () => {
     try {
       const res = await fetch(SHEET_URL);
       const csv = await res.text();
-      setSheetData(parseCSV(csv));
+      const { sheetData: sd, sheetColors: sc } = parseCSV(csv);
+      setSheetData(sd);
+      setSheetColors(sc);
     } catch (e) {
       toast.error("Erro ao carregar dados da planilha.");
     } finally {
@@ -162,15 +278,7 @@ export default function Calendar() {
     setCurrentMonthIndex(idx);
   };
 
-  const handleHiddenButtonClick = () => {
-    hiddenButtonClickCount.current += 1;
-    if (hiddenButtonTimer.current) clearTimeout(hiddenButtonTimer.current);
-    hiddenButtonTimer.current = setTimeout(() => { hiddenButtonClickCount.current = 0; }, 2000);
-    if (hiddenButtonClickCount.current >= 1) {
-      setShowOwnerLogin(true);
-      hiddenButtonClickCount.current = 0;
-    }
-  };
+
 
   const handleOwnerLogin = () => {
     if (ownerPasswordInput === OWNER_PASSWORD) {
@@ -184,19 +292,14 @@ export default function Calendar() {
     }
   };
 
-  const saveColor = (year: number, month: number, day: number, color: string) => {
-    const key = dayKey(year, month, day);
-    const updated = { ...colorData, [key]: color };
-    setColorData(updated);
-    localStorage.setItem("ceam_colors", JSON.stringify(updated));
-  };
+
 
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="relative min-h-screen flex flex-col" style={{ background: theme.bg }}>
       {/* Header */}
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100 shadow-sm px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm shadow-md">
+          <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${theme.header} flex items-center justify-center text-white text-sm shadow-md`}>
             📅
           </div>
           <div>
@@ -206,15 +309,23 @@ export default function Calendar() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={cycleTheme}
+            className="px-2 py-1.5 rounded-xl text-sm transition-all hover:scale-110"
+            title={`Tema: ${theme.name}`}
+            style={{ filter: "drop-shadow(0 0 4px rgba(0,0,0,0.15))" }}
+          >
+            🎨
+          </button>
+          <button
             onClick={fetchSheetData}
-            className="px-2 py-1.5 rounded-xl text-sm text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 transition-all"
-            title="Atualizar"
+            className="px-2 py-1.5 rounded-xl text-sm text-gray-400 hover:bg-white/60 transition-all"
+            title="Atualizar dados"
           >
             🔄
           </button>
           <button
             onClick={() => setShowEmails(true)}
-            className="px-3 py-1.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 transition-all shadow-sm hover:shadow-md"
+            className={`px-3 py-1.5 rounded-xl text-sm font-semibold bg-gradient-to-r ${theme.badge} text-white transition-all shadow-sm hover:shadow-md`}
           >
             📧 Emails
           </button>
@@ -245,7 +356,7 @@ export default function Calendar() {
             onClick={() => scrollToMonth(i)}
             className={`px-4 py-1.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
               currentMonthIndex === i
-                ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-200"
+                ? `bg-gradient-to-r ${theme.tab} text-white shadow-md`
                 : "bg-white text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 border border-gray-100"
             }`}
           >
@@ -257,7 +368,7 @@ export default function Calendar() {
       {/* Loading bar */}
       {loading && (
         <div className="h-0.5 bg-indigo-100 overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-indigo-400 to-purple-400 animate-pulse w-full" />
+          <div className={`h-full bg-gradient-to-r ${theme.dot} animate-pulse w-full`} />
         </div>
       )}
 
@@ -274,24 +385,19 @@ export default function Calendar() {
             year={m.year}
             month={m.month}
             monthName={m.name}
-            editMode={editMode}
             sheetData={sheetData}
-            colorData={colorData}
+            colorData={sheetColors}
+            theme={theme}
             onDayClick={(day) => {
               setSelectedDay({ year: m.year, month: m.month, day });
               setSelectedAssignment(null);
             }}
-            onEditDay={(day) => setEditingDay({ year: m.year, month: m.month, day })}
+
           />
         ))}
       </div>
 
-      {/* Hidden owner button */}
-      <button
-        onClick={handleHiddenButtonClick}
-        className="fixed bottom-4 left-4 w-6 h-6 rounded-full bg-indigo-600 opacity-20 hover:opacity-40 transition-opacity z-50"
-        aria-label="Owner access"
-      />
+
 
       {/* Day detail modal */}
       {selectedDay && (
@@ -300,6 +406,7 @@ export default function Calendar() {
           month={selectedDay.month}
           day={selectedDay.day}
           sheetData={sheetData}
+          theme={theme}
           onClose={() => { setSelectedDay(null); setSelectedAssignment(null); }}
           selectedAssignment={selectedAssignment}
           onSelectAssignment={setSelectedAssignment}
@@ -307,17 +414,7 @@ export default function Calendar() {
         />
       )}
 
-      {/* Edit day modal (colors only — assignments managed via Sheets) */}
-      {editingDay && (
-        <EditDayModal
-          year={editingDay.year}
-          month={editingDay.month}
-          day={editingDay.day}
-          colorData={colorData}
-          onClose={() => setEditingDay(null)}
-          onSaveColor={saveColor}
-        />
-      )}
+
 
       {/* Emails modal */}
       {showEmails && <EmailsModal onClose={() => setShowEmails(false)} />}
@@ -350,14 +447,13 @@ export default function Calendar() {
 // ─── Month View ───────────────────────────────────────────────────────────────
 
 function MonthView({
-  year, month, monthName, editMode, sheetData, colorData, onDayClick, onEditDay,
+  year, month, monthName, sheetData, colorData, theme, onDayClick,
 }: {
   year: number; month: number; monthName: string;
-  editMode: boolean;
   sheetData: SheetData;
   colorData: ColorData;
+  theme: Theme;
   onDayClick: (day: number) => void;
-  onEditDay: (day: number) => void;
 }) {
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
@@ -371,14 +467,14 @@ function MonthView({
   return (
     <div className="min-w-full snap-start flex flex-col p-4">
       <div className="mb-5 text-center">
-        <h2 className="text-3xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+        <h2 className={`text-3xl font-extrabold bg-gradient-to-r ${theme.text} bg-clip-text text-transparent`}>
           {monthName}
         </h2>
         <p className="text-sm text-gray-400 font-medium">{year}</p>
       </div>
       <div className="grid grid-cols-7 mb-2 bg-white/60 rounded-xl px-1 py-1 border border-indigo-50">
         {DAY_NAMES.map((d) => (
-          <div key={d} className="text-center text-xs font-bold text-indigo-400 py-1">{d}</div>
+          <div key={d} className="text-center text-xs font-bold text-gray-400 py-1">{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1.5">
@@ -393,30 +489,27 @@ function MonthView({
           return (
             <button
               key={day}
-              onClick={() => editMode ? onEditDay(day) : onDayClick(day)}
+              onClick={() => onDayClick(day)}
               className={`
                 day-cell relative aspect-square flex flex-col items-center justify-start pt-1.5 rounded-xl text-sm font-medium
                 transition-all duration-200 hover:scale-105 active:scale-95
-                ${isToday ? "ring-2 ring-indigo-400 today-pulse" : ""}
+                ${isToday ? `ring-2 ${theme.ring} today-pulse` : ""}
                 ${bgColor ? "border border-white/60" : "bg-white/80 hover:bg-white border border-indigo-50 hover:border-indigo-200"}
-                ${editMode ? "ring-1 ring-indigo-200" : ""}
                 shadow-sm
               `}
               style={bgColor ? { backgroundColor: bgColor } : {}}
             >
-              <span className={`text-xs font-bold ${isToday ? "text-indigo-600" : "text-gray-700"}`}>
+              <span className="text-xs font-bold text-gray-700">
                 {day}
               </span>
               {hasAssignments && (
                 <div className="flex flex-wrap justify-center gap-0.5 mt-1">
                   {assignments.slice(0, 3).map((_, idx) => (
-                    <div key={idx} className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400" />
+                    <div key={idx} className={`w-1.5 h-1.5 rounded-full bg-gradient-to-br ${theme.dot}`} />
                   ))}
                 </div>
               )}
-              {editMode && (
-                <div className="absolute top-0.5 right-0.5 text-indigo-300 text-xs">🎨</div>
-              )}
+
             </button>
           );
         })}
@@ -428,10 +521,11 @@ function MonthView({
 // ─── Day Modal ────────────────────────────────────────────────────────────────
 
 function DayModal({
-  year, month, day, sheetData, onClose, selectedAssignment, onSelectAssignment, onBackFromAssignment,
+  year, month, day, sheetData, theme, onClose, selectedAssignment, onSelectAssignment, onBackFromAssignment,
 }: {
   year: number; month: number; day: number;
   sheetData: SheetData;
+  theme: Theme;
   onClose: () => void;
   selectedAssignment: Assignment | null;
   onSelectAssignment: (a: Assignment) => void;
@@ -446,7 +540,7 @@ function DayModal({
         className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-5 py-5 flex items-center justify-between">
+        <div className={`bg-gradient-to-r ${theme.header} px-5 py-5 flex items-center justify-between`}>
           {selectedAssignment ? (
             <button onClick={onBackFromAssignment} className="text-white/90 font-semibold flex items-center gap-1 hover:text-white transition-colors">
               ← Voltar
@@ -454,7 +548,7 @@ function DayModal({
           ) : (
             <div>
               <h3 className="text-xl font-bold text-white">{day} de {monthName}</h3>
-              <p className="text-indigo-200 text-sm">{year}</p>
+              <p className="text-white/60 text-sm">{year}</p>
             </div>
           )}
           <button onClick={onClose} className="text-white/70 hover:text-white text-xl w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">✕</button>
@@ -463,7 +557,7 @@ function DayModal({
           {selectedAssignment ? (
             <AssignmentDetail assignment={selectedAssignment} />
           ) : (
-            <AssignmentList assignments={assignments} onSelect={onSelectAssignment} />
+            <AssignmentList assignments={assignments} theme={theme} onSelect={onSelectAssignment} />
           )}
         </div>
       </div>
@@ -471,7 +565,7 @@ function DayModal({
   );
 }
 
-function AssignmentList({ assignments, onSelect }: { assignments: Assignment[]; onSelect: (a: Assignment) => void }) {
+function AssignmentList({ assignments, theme, onSelect }: { assignments: Assignment[]; theme: Theme; onSelect: (a: Assignment) => void }) {
   if (assignments.length === 0) {
     return (
       <div className="text-center py-12 text-gray-400">
@@ -483,7 +577,7 @@ function AssignmentList({ assignments, onSelect }: { assignments: Assignment[]; 
   }
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs text-indigo-400 uppercase font-bold mb-2 tracking-wider">Atividades</p>
+      <p className="text-xs text-gray-400 uppercase font-bold mb-2 tracking-wider">Atividades</p>
       {assignments.map((a, idx) => (
         <button
           key={a.id}
@@ -491,7 +585,7 @@ function AssignmentList({ assignments, onSelect }: { assignments: Assignment[]; 
           className="w-full text-left px-4 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 border border-indigo-100 transition-all flex items-center justify-between group shadow-sm hover:shadow"
         >
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+            <div className={`w-7 h-7 rounded-xl bg-gradient-to-br ${theme.dot} flex items-center justify-center text-white text-xs font-bold shadow-sm`}>
               {idx + 1}
             </div>
             <span className="font-semibold text-gray-800">{a.title}</span>
@@ -507,7 +601,7 @@ function AssignmentDetail({ assignment }: { assignment: Assignment }) {
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-lg shadow-md">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white text-lg shadow-md">
           📝
         </div>
         <h4 className="text-xl font-bold text-gray-800">{assignment.title}</h4>
@@ -516,66 +610,6 @@ function AssignmentDetail({ assignment }: { assignment: Assignment }) {
         <p className="text-xs text-indigo-400 uppercase font-bold mb-2 tracking-wider">Descrição</p>
         <div className="prose prose-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
           {assignment.description || <span className="text-gray-400 italic">Sem descrição.</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Edit Day Modal (colors only) ─────────────────────────────────────────────
-
-function EditDayModal({
-  year, month, day, colorData, onClose, onSaveColor,
-}: {
-  year: number; month: number; day: number;
-  colorData: ColorData;
-  onClose: () => void;
-  onSaveColor: (year: number, month: number, day: number, color: string) => void;
-}) {
-  const monthName = MONTH_NAMES[month] ?? "";
-  const key = dayKey(year, month, day);
-  const [color, setColor] = useState(colorData[key] ?? "#ffffff");
-
-  const handleSave = () => {
-    onSaveColor(year, month, day, color);
-    toast.success("Cor salva!");
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h3 className="text-lg font-bold text-gray-800">🎨 Cor: {monthName} {day}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
-        </div>
-        <div className="px-5 py-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Escolha uma cor</p>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {PRESET_COLORS.map((c) => (
-              <button
-                key={c.value}
-                onClick={() => setColor(c.value)}
-                title={c.label}
-                className={`w-9 h-9 rounded-full border-2 transition-transform hover:scale-110 ${
-                  color === c.value ? "border-indigo-600 scale-110" : "border-gray-300"
-                }`}
-                style={{ backgroundColor: c.value }}
-              />
-            ))}
-          </div>
-          <p className="text-xs text-gray-400 mb-4">
-            💡 Para adicionar atividades, edite a planilha do Google Sheets.
-          </p>
-          <button
-            onClick={handleSave}
-            className="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
-          >
-            Salvar cor
-          </button>
         </div>
       </div>
     </div>
