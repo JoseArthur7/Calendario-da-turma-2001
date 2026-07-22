@@ -370,12 +370,7 @@ export default function Calendar() {
             {m.name}
           </button>
         ))}
-        <button
-          onClick={() => setShowSchedule(true)}
-          className="sm:hidden ml-auto px-5 py-2.5 rounded-xl text-base font-semibold whitespace-nowrap bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 transition-all shrink-0"
-        >
-          🕐 Horários
-        </button>
+
       </div>
 
       {/* Loading bar */}
@@ -411,6 +406,16 @@ export default function Calendar() {
       </div>
 
 
+
+      {/* Mobile schedule button — shown below calendar on small screens */}
+      <div className="sm:hidden px-4 py-3 bg-white/60 backdrop-blur-sm border-t border-gray-100">
+        <button
+          onClick={() => setShowSchedule(true)}
+          className="w-full py-3 rounded-2xl text-sm font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2"
+        >
+          🕐 Ver Horários das Aulas
+        </button>
+      </div>
 
       {/* Day detail modal */}
       {selectedDay && (
