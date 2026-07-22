@@ -230,6 +230,7 @@ export default function Calendar() {
   const [ownerPasswordInput, setOwnerPasswordInput] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [showEmails, setShowEmails] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
 
   // Google Sheets data
   const [sheetData, setSheetData] = useState<SheetData>({});
@@ -324,6 +325,12 @@ export default function Calendar() {
             🔄
           </button>
           <button
+            onClick={() => setShowSchedule(true)}
+            className="hidden sm:block px-3 py-1.5 rounded-xl text-sm font-semibold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md"
+          >
+            🕐 Horários
+          </button>
+          <button
             onClick={() => setShowEmails(true)}
             className={`px-3 py-1.5 rounded-xl text-sm font-semibold bg-gradient-to-r ${theme.badge} text-white transition-all shadow-sm hover:shadow-md`}
           >
@@ -399,6 +406,16 @@ export default function Calendar() {
 
 
 
+      {/* Mobile schedule button */}
+      <div className="sm:hidden px-4 py-3 bg-white/60 border-t border-gray-100">
+        <button
+          onClick={() => setShowSchedule(true)}
+          className="w-full py-2.5 rounded-xl text-sm font-semibold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center gap-2"
+        >
+          🕐 Ver Horários das Aulas
+        </button>
+      </div>
+
       {/* Day detail modal */}
       {selectedDay && (
         <DayModal
@@ -418,6 +435,9 @@ export default function Calendar() {
 
       {/* Emails modal */}
       {showEmails && <EmailsModal onClose={() => setShowEmails(false)} />}
+
+      {/* Schedule modal */}
+      {showSchedule && <ScheduleModal theme={theme} onClose={() => setShowSchedule(false)} />}
 
       {/* Owner login modal */}
       {showOwnerLogin && (
@@ -662,6 +682,168 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
         {children}
+      </div>
+    </div>
+  );
+}
+
+// ─── Schedule Modal ───────────────────────────────────────────────────────────
+
+const SCHEDULE = [
+  {
+    time: "08:00 - 08:50",
+    seg: { subject: "Química",           teacher: "Thiago",         color: "bg-cyan-100 text-cyan-800 border-cyan-200" },
+    ter: { subject: "Espanhol",          teacher: "Ronaldo",        color: "bg-orange-100 text-orange-800 border-orange-200" },
+    qua: { subject: "Biologia",          teacher: "Christian",      color: "bg-green-100 text-green-800 border-green-200" },
+    qui: { subject: "Biologia",          teacher: "Christian",      color: "bg-green-100 text-green-800 border-green-200" },
+    sex: { subject: "Língua Portuguesa", teacher: "Márcia",         color: "bg-rose-100 text-rose-800 border-rose-200" },
+  },
+  {
+    time: "08:50 - 09:40",
+    seg: { subject: "MAT II",            teacher: "Kacielly",       color: "bg-blue-100 text-blue-800 border-blue-200" },
+    ter: { subject: "MAT I",             teacher: "Maycon",         color: "bg-blue-100 text-blue-800 border-blue-200" },
+    qua: { subject: "Língua Portuguesa", teacher: "Márcia",         color: "bg-rose-100 text-rose-800 border-rose-200" },
+    qui: { subject: "MAT I",             teacher: "Maycon",         color: "bg-blue-100 text-blue-800 border-blue-200" },
+    sex: { subject: "Literatura",        teacher: "Rodrigo Martins",color: "bg-purple-100 text-purple-800 border-purple-200" },
+  },
+  {
+    time: "09:40 - 10:30",
+    seg: { subject: "Redação",           teacher: "Ronaldo",        color: "bg-amber-100 text-amber-800 border-amber-200" },
+    ter: { subject: "Sociologia",        teacher: "Jeff",           color: "bg-teal-100 text-teal-800 border-teal-200" },
+    qua: { subject: "Química",           teacher: "Thiago",         color: "bg-cyan-100 text-cyan-800 border-cyan-200" },
+    qui: { subject: "Língua Inglesa",    teacher: "Vanessa",        color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+    sex: { subject: "IF. MAT",           teacher: "Kacielly",       color: "bg-blue-100 text-blue-800 border-blue-200" },
+  },
+  { time: "10:30 - 10:50", recreio: true },
+  {
+    time: "10:50 - 11:40",
+    seg: { subject: "Física",            teacher: "Limarcos",       color: "bg-violet-100 text-violet-800 border-violet-200" },
+    ter: { subject: "Geografia",         teacher: "Rodrigo",        color: "bg-lime-100 text-lime-800 border-lime-200" },
+    qua: { subject: "História",          teacher: "Arthur",         color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+    qui: { subject: "História",          teacher: "Arthur",         color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+    sex: { subject: "Língua Inglesa",    teacher: "Vanessa",        color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+  },
+  {
+    time: "11:40 - 12:30",
+    seg: { subject: "Física",            teacher: "Limarcos",       color: "bg-violet-100 text-violet-800 border-violet-200" },
+    ter: { subject: "Ed. Física",        teacher: "Diego",          color: "bg-pink-100 text-pink-800 border-pink-200" },
+    qua: { subject: "Projeto de Vida",   teacher: "Tatiana",        color: "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200" },
+    qui: { subject: "Biologia",          teacher: "Christian",      color: "bg-green-100 text-green-800 border-green-200" },
+    sex: { subject: "IF. Língua Port.",  teacher: "Márcia",         color: "bg-rose-100 text-rose-800 border-rose-200" },
+  },
+  {
+    time: "12:30 - 13:20",
+    seg: { subject: "MAT II",            teacher: "Kacielly",       color: "bg-blue-100 text-blue-800 border-blue-200" },
+    ter: { subject: "Filosofia",         teacher: "Jeff",           color: "bg-slate-100 text-slate-800 border-slate-200" },
+    qua: { subject: "Redação",           teacher: "Ronaldo",        color: "bg-amber-100 text-amber-800 border-amber-200" },
+    qui: { subject: "MAT I",             teacher: "Maycon",         color: "bg-blue-100 text-blue-800 border-blue-200" },
+    sex: { subject: "Geografia",         teacher: "Rodrigo",        color: "bg-lime-100 text-lime-800 border-lime-200" },
+  },
+];
+
+const DAYS = ["seg", "ter", "qua", "qui", "sex"] as const;
+const DAY_LABELS: Record<typeof DAYS[number], string> = {
+  seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta",
+};
+
+type SlotData = { subject: string; teacher: string; color: string };
+type ScheduleRow = { time: string; recreio?: boolean } & Partial<Record<typeof DAYS[number], SlotData>>;
+
+function ScheduleModal({ theme, onClose }: { theme: Theme; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full sm:max-w-5xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+        style={{ maxHeight: "90vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className={`bg-gradient-to-r ${theme.header} px-5 py-5 flex items-center justify-between shrink-0`}>
+          <div>
+            <h3 className="text-xl font-bold text-white">🕐 Horários das Aulas</h3>
+            <p className="text-white/60 text-sm">Grade semanal · CEAM 2026</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white text-xl w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Table — desktop */}
+        <div className="hidden sm:block overflow-auto flex-1">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-4 py-3 text-left font-bold text-gray-500 text-xs uppercase tracking-wider w-32">Horário</th>
+                {DAYS.map((d) => (
+                  <th key={d} className="px-4 py-3 text-center font-bold text-gray-700 text-xs uppercase tracking-wider">
+                    {DAY_LABELS[d]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(SCHEDULE as ScheduleRow[]).map((row, i) => (
+                <tr key={i} className={`border-b border-gray-100 ${row.recreio ? "bg-gray-50" : "hover:bg-gray-50/60"}`}>
+                  <td className="px-4 py-3 font-semibold text-gray-500 text-xs whitespace-nowrap">{row.time}</td>
+                  {row.recreio ? (
+                    <td colSpan={5} className="px-4 py-3 text-center font-bold text-gray-400 text-xs uppercase tracking-widest">
+                      — Recreio —
+                    </td>
+                  ) : (
+                    DAYS.map((d) => {
+                      const slot = row[d] as SlotData | undefined;
+                      return (
+                        <td key={d} className="px-3 py-2.5">
+                          {slot && (
+                            <div className={`rounded-xl px-3 py-2 border ${slot.color} text-center`}>
+                              <p className="font-semibold text-xs leading-tight">{slot.subject}</p>
+                              <p className="text-xs opacity-70 leading-tight mt-0.5">{slot.teacher}</p>
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Cards — mobile */}
+        <div className="sm:hidden overflow-y-auto flex-1 px-4 py-4 flex flex-col gap-4">
+          {DAYS.map((d) => (
+            <div key={d}>
+              <h4 className="font-bold text-gray-700 text-sm mb-2 uppercase tracking-wider">{DAY_LABELS[d]}</h4>
+              <div className="flex flex-col gap-2">
+                {(SCHEDULE as ScheduleRow[]).map((row, i) => {
+                  if (row.recreio) return (
+                    <div key={i} className="bg-gray-50 rounded-xl px-3 py-2 text-center text-xs text-gray-400 font-semibold border border-gray-100">
+                      {row.time} · Recreio
+                    </div>
+                  );
+                  const slot = row[d] as SlotData | undefined;
+                  if (!slot) return null;
+                  return (
+                    <div key={i} className={`rounded-xl px-3 py-2.5 border ${slot.color} flex items-center justify-between`}>
+                      <div>
+                        <p className="font-semibold text-xs">{slot.subject}</p>
+                        <p className="text-xs opacity-70">{slot.teacher}</p>
+                      </div>
+                      <span className="text-xs opacity-60 whitespace-nowrap ml-2">{row.time}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
