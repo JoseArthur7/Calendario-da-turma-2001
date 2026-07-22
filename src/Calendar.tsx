@@ -372,7 +372,7 @@ export default function Calendar() {
         ))}
         <button
           onClick={() => setShowSchedule(true)}
-          className="sm:hidden ml-auto px-4 py-1.5 rounded-xl text-sm font-semibold whitespace-nowrap bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 transition-all shrink-0"
+          className="sm:hidden ml-auto px-5 py-2.5 rounded-xl text-base font-semibold whitespace-nowrap bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 transition-all shrink-0"
         >
           🕐 Horários
         </button>
