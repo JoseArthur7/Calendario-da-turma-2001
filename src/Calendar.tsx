@@ -3,6 +3,7 @@ import { toast } from "sonner";
 
 const SHEET_ID = "1YGSZ7rJkSkhyb0OFkMVxRht-4L6tXlgDN3vRELJuzIo";
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+const BOARDS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=quadros`;
 
 const MONTHS = [
   { month: 8,  name: "Agosto",   year: 2026 },
@@ -143,6 +144,36 @@ function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month - 1, 1).getDay();
 }
 
+// ─── Board Photo type ────────────────────────────────────────────────────────
+
+type BoardPhoto = { year: number; month: number; link: string; descricao: string };
+
+function parseBoardsCSV(csv: string): BoardPhoto[] {
+  const lines = csv.trim().split("\n");
+  const photos: BoardPhoto[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    const cols: string[] = [];
+    let cur = "";
+    let inQuote = false;
+    for (let c = 0; c < line.length; c++) {
+      const ch = line[c];
+      if (ch === '"') { inQuote = !inQuote; }
+      else if (ch === "," && !inQuote) { cols.push(cur.trim()); cur = ""; }
+      else { cur += ch; }
+    }
+    cols.push(cur.trim());
+    const year  = parseInt(cols[0]);
+    const month = parseInt(cols[1]);
+    const link  = (cols[2] ?? "").replace(/^"|"$/g, "").trim();
+    const descricao = (cols[3] ?? "").replace(/^"|"$/g, "").trim();
+    if (!year || !month || !link) continue;
+    photos.push({ year, month, link, descricao });
+  }
+  return photos;
+}
+
 // ─── Color name → hex ────────────────────────────────────────────────────────
 
 const COLOR_MAP: Record<string, string> = {
@@ -231,9 +262,11 @@ export default function Calendar() {
   const [editMode, setEditMode] = useState(false);
   const [showEmails, setShowEmails] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [showBoards, setShowBoards] = useState(false);
 
   // Google Sheets data
   const [sheetData, setSheetData] = useState<SheetData>({});
+  const [boardsData, setBoardsData] = useState<BoardPhoto[]>([]);
   const [sheetColors, setSheetColors] = useState<ColorData>({});
   const [loading, setLoading] = useState(true);
 
@@ -254,10 +287,21 @@ export default function Calendar() {
     }
   }, []);
 
+  const fetchBoardsData = useCallback(async () => {
+    try {
+      const res = await fetch(BOARDS_URL);
+      const csv = await res.text();
+      setBoardsData(parseBoardsCSV(csv));
+    } catch (e) {
+      // Silently fail for boards
+    }
+  }, []);
+
   useEffect(() => {
     fetchSheetData();
+    fetchBoardsData();
     // auto-refresh every 60s
-    const interval = setInterval(fetchSheetData, 60000);
+    const interval = setInterval(() => { fetchSheetData(); fetchBoardsData(); }, 60000);
     return () => clearInterval(interval);
   }, [fetchSheetData]);
 
@@ -323,6 +367,12 @@ export default function Calendar() {
             title="Atualizar dados"
           >
             🔄
+          </button>
+          <button
+            onClick={() => setShowBoards(true)}
+            className="hidden sm:block px-3 py-1.5 rounded-xl text-sm font-semibold bg-blue-500 text-white hover:bg-blue-600 transition-all shadow-sm hover:shadow-md"
+          >
+            🖼️ Quadros
           </button>
           <button
             onClick={() => setShowSchedule(true)}
@@ -407,8 +457,18 @@ export default function Calendar() {
 
 
 
+      {/* Mobile boards button */}
+      <div className="sm:hidden px-4 pt-3 pb-1 bg-white/60 backdrop-blur-sm border-t border-gray-100">
+        <button
+          onClick={() => setShowBoards(true)}
+          className="w-full py-3 rounded-2xl text-sm font-bold bg-blue-500 text-white active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2"
+        >
+          🖼️ Ver Quadros da Sala
+        </button>
+      </div>
+
       {/* Mobile schedule button — shown below calendar on small screens */}
-      <div className="sm:hidden px-4 py-3 bg-white/60 backdrop-blur-sm border-t border-gray-100">
+      <div className="sm:hidden px-4 py-3 bg-white/60 backdrop-blur-sm">
         <button
           onClick={() => setShowSchedule(true)}
           className="w-full py-3 rounded-2xl text-sm font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2"
@@ -436,6 +496,9 @@ export default function Calendar() {
 
       {/* Emails modal */}
       {showEmails && <EmailsModal onClose={() => setShowEmails(false)} />}
+
+      {/* Boards modal */}
+      {showBoards && <BoardsModal theme={theme} photos={boardsData} onClose={() => setShowBoards(false)} />}
 
       {/* Schedule modal */}
       {showSchedule && <ScheduleModal theme={theme} onClose={() => setShowSchedule(false)} />}
@@ -847,5 +910,156 @@ function ScheduleModal({ theme, onClose }: { theme: Theme; onClose: () => void }
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Boards Modal ─────────────────────────────────────────────────────────────
+
+const MONTH_NAMES_FULL: Record<number, string> = {
+  1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+  5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+  9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
+};
+
+function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPhoto[]; onClose: () => void }) {
+  const today = new Date();
+  const currentMonth = today.getMonth() + 1;
+  const currentYear = today.getFullYear();
+
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [selectedYear] = useState(currentYear);
+  const [lightbox, setLightbox] = useState<BoardPhoto | null>(null);
+
+  // Get unique months that have photos
+  const availableMonths = Array.from(
+    new Set(photos.map((p) => `${p.year}-${p.month}`))
+  ).map((key) => {
+    const [y, m] = key.split("-").map(Number);
+    return { year: y, month: m };
+  }).sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
+
+  const filtered = photos.filter((p) => p.month === selectedMonth && p.year === selectedYear);
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <div
+          className="bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+          style={{ maxHeight: "90vh" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className={`bg-gradient-to-r from-blue-500 to-blue-700 px-5 py-5 flex items-center justify-between shrink-0`}>
+            <div>
+              <h3 className="text-xl font-bold text-white">🖼️ Quadros da Sala</h3>
+              <p className="text-blue-200 text-sm">Fotos organizadas por mês</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white/70 hover:text-white text-xl w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+            >✕</button>
+          </div>
+
+          {/* Month tabs */}
+          {availableMonths.length > 0 && (
+            <div className="flex gap-2 px-4 py-3 overflow-x-auto border-b border-gray-100 bg-gray-50 shrink-0 hide-scrollbar">
+              {availableMonths.map((m) => (
+                <button
+                  key={`${m.year}-${m.month}`}
+                  onClick={() => setSelectedMonth(m.month)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                    selectedMonth === m.month && selectedYear === m.year
+                      ? "bg-blue-500 text-white shadow-md"
+                      : "bg-white text-gray-500 hover:bg-blue-50 border border-gray-200"
+                  }`}
+                >
+                  {MONTH_NAMES_FULL[m.month]}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Photos grid */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {photos.length === 0 && (
+              <div className="text-center py-16 text-gray-400">
+                <div className="text-5xl mb-3">🖼️</div>
+                <p className="text-sm font-medium">Nenhuma foto ainda</p>
+                <p className="text-xs text-gray-300 mt-1">Adicione fotos na aba "quadros" da planilha</p>
+              </div>
+            )}
+            {photos.length > 0 && filtered.length === 0 && (
+              <div className="text-center py-16 text-gray-400">
+                <div className="text-5xl mb-3">📅</div>
+                <p className="text-sm font-medium">Sem fotos em {MONTH_NAMES_FULL[selectedMonth]}</p>
+              </div>
+            )}
+            {filtered.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {filtered.map((photo, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setLightbox(photo)}
+                    className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95 bg-gray-100"
+                  >
+                    <img
+                      src={photo.link}
+                      alt={photo.descricao || `Quadro ${i + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    {photo.descricao && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {photo.descricao}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <div className="relative max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={lightbox.link}
+              alt={lightbox.descricao}
+              className="w-full rounded-2xl shadow-2xl max-h-[80vh] object-contain"
+            />
+            {lightbox.descricao && (
+              <p className="text-white text-center mt-3 text-sm">{lightbox.descricao}</p>
+            )}
+            <div className="flex gap-3 justify-center mt-4">
+              <a
+                href={lightbox.link}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-white text-gray-800 rounded-xl text-sm font-semibold hover:bg-gray-100 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                ⬇️ Baixar
+              </a>
+              <button
+                onClick={() => setLightbox(null)}
+                className="px-4 py-2 bg-white/20 text-white rounded-xl text-sm font-semibold hover:bg-white/30 transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
