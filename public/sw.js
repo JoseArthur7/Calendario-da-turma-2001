@@ -1,15 +1,23 @@
-const CACHE_NAME = "calendario-2001-v1";
-const STATIC_ASSETS = ["/", "/index.html"];
+importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
-// Install — cache static assets
+firebase.initializeApp({
+  apiKey: "AIzaSyCXiZajoc67Ke_ggkD3oSxrJLO4e_ND3zY",
+  authDomain: "calendario-2001.firebaseapp.com",
+  projectId: "calendario-2001",
+  storageBucket: "calendario-2001.firebasestorage.app",
+  messagingSenderId: "414569008948",
+  appId: "1:414569008948:web:03b9438368bb48c3aedf61",
+});
+
+const messaging = firebase.messaging();
+
+const CACHE_NAME = "calendario-2001-v1";
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
-  );
   self.skipWaiting();
 });
 
-// Activate — clean old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -19,44 +27,37 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch — network first, fallback to cache
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   event.respondWith(
     fetch(event.request)
-      .then((res) => {
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        return res;
-      })
+      .then((res) => res)
       .catch(() => caches.match(event.request))
   );
 });
 
-// Push notifications
-self.addEventListener("push", (event) => {
-  const data = event.data ? event.data.json() : {};
-  const title = data.title || "Calendário 2001";
-  const options = {
-    body: data.body || "Novo trabalho adicionado!",
+// Background push notifications via Firebase
+messaging.onBackgroundMessage((payload) => {
+  const title = payload.notification?.title || "Calendário 2001";
+  const body = payload.notification?.body || "Novo trabalho adicionado!";
+  self.registration.showNotification(title, {
+    body,
     icon: "/icon-192.png",
     badge: "/icon-192.png",
-    data: { url: data.url || "/" },
     vibrate: [200, 100, 200],
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
+    data: { url: "/" },
+  });
 });
 
-// Click on notification — open the site
+// Click notification — open the site
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: "window" }).then((clientList) => {
-      const url = event.notification.data?.url || "/";
       for (const client of clientList) {
-        if (client.url === url && "focus" in client) return client.focus();
+        if ("focus" in client) return client.focus();
       }
-      if (clients.openWindow) return clients.openWindow(url);
+      if (clients.openWindow) return clients.openWindow("/");
     })
   );
 });
