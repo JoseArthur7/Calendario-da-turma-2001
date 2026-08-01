@@ -8,54 +8,47 @@ const firebaseConfig = {
   storageBucket: "calendario-2001.firebasestorage.app",
   messagingSenderId: "414569008948",
   appId: "1:414569008948:web:03b9438368bb48c3aedf61",
-  measurementId: "G-TEYEVV7CWL",
 };
 
 const VAPID_KEY = "BDxKD_FQFeqehSzvci-0GriTgGz1m-5pL5tpF7kMhcEI6vlINQ9XHLBQNN0iW_fnBWpeYT6Hkp9e_4TZUIah5xM";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBA4E6n8zBKGxJRIfwzwx8baUPRndUOyFdK5gWZn4a-cCoBQC266klEiMVS0kxXwm6/exec";
 
 const app = initializeApp(firebaseConfig);
 
 export async function requestNotificationPermission(): Promise<string | null> {
+  if (!("Notification" in window) || !("serviceWorker" in navigator)) return null;
+
   try {
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return null;
 
     const messaging = getMessaging(app);
+    const swReg = await navigator.serviceWorker.ready;
+
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: await navigator.serviceWorker.ready,
+      serviceWorkerRegistration: swReg,
     });
 
-    // Save token to localStorage so the Apps Script can collect it
-    const tokens: string[] = JSON.parse(localStorage.getItem("fcm_tokens") ?? "[]");
-    if (!tokens.includes(token)) {
-      tokens.push(token);
-      localStorage.setItem("fcm_tokens", JSON.stringify(tokens));
-    }
+    if (!token) return null;
 
-    // Also save to a shared location via the sheet URL pattern
-    // We store the token in a Firestore-like way using the sheet
-    await saveTokenToSheet(token);
+    // Avoid re-registering the same token
+    const saved = localStorage.getItem("fcm_token");
+    if (saved === token) return token;
 
-    return token;
-  } catch (err) {
-    console.error("Erro ao registrar notificações:", err);
-    return null;
-  }
-}
-
-async function saveTokenToSheet(token: string) {
-  // We post the token to a Google Apps Script web app that saves it
-  const SCRIPT_URL = ""; // Will be filled after Apps Script is deployed
-  if (!SCRIPT_URL) return;
-  try {
+    // Send token to Apps Script so it can be stored in the sheet
     await fetch(SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify({ token }),
       headers: { "Content-Type": "application/json" },
+      mode: "no-cors", // Apps Script requires no-cors
     });
-  } catch (e) {
-    // Silently fail — token already saved locally
+
+    localStorage.setItem("fcm_token", token);
+    return token;
+  } catch (err) {
+    console.error("Erro ao registrar notificações:", err);
+    return null;
   }
 }
 
@@ -64,8 +57,11 @@ export function setupForegroundNotifications() {
     const messaging = getMessaging(app);
     onMessage(messaging, (payload) => {
       const { title, body } = payload.notification ?? {};
-      if (title) {
-        new Notification(title, { body: body ?? "", icon: "/icon-192.png" });
+      if (title && Notification.permission === "granted") {
+        new Notification(title, {
+          body: body ?? "",
+          icon: "/icon-192.png",
+        });
       }
     });
   } catch (e) {
