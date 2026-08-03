@@ -41,6 +41,8 @@ const PROFESSORS = [
   { name: "Tatiana",           email: "tatiana.besada@gmail.com" },
   { name: "Limarcos",          email: "limarcos.ferreira@gmail.com" },
   { name: "Diego",             email: "bottinodiego@gmail.com" },
+  { name: "Ronaldo",             email: "ronaldofg1@gmail.com" },
+  { name: "Thiago",             email: "thiagovs2@gmail.com" },
   { name: "Email da Escola",              email: "contato.ceam@gmail.com" },
 ];
 
