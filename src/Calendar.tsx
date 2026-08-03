@@ -41,8 +41,6 @@ const PROFESSORS = [
   { name: "Tatiana",           email: "tatiana.besada@gmail.com" },
   { name: "Limarcos",          email: "limarcos.ferreira@gmail.com" },
   { name: "Diego",             email: "bottinodiego@gmail.com" },
-  { name: "Ronaldo",             email: "ronaldofg1@gmail.com" },
-  { name: "Thiago",             email: "thiagovs2@gmail.com" },
   { name: "Email da Escola",              email: "contato.ceam@gmail.com" },
 ];
 
@@ -168,7 +166,14 @@ function getFirstDayOfMonth(year: number, month: number) {
 
 // ─── Board Photo type ────────────────────────────────────────────────────────
 
-type BoardPhoto = { year: number; month: number; link: string; descricao: string };
+type BoardPhoto = {
+  year: number;
+  month: number;
+  link: string;
+  descricao: string;
+  tipo: "quadro" | "pdf";
+  professor: string;
+};
 
 function parseBoardsCSV(csv: string): BoardPhoto[] {
   const lines = csv.trim().split("\n");
@@ -190,8 +195,13 @@ function parseBoardsCSV(csv: string): BoardPhoto[] {
     const month = parseInt(cols[1]);
     const link  = (cols[2] ?? "").replace(/^"|"$/g, "").trim();
     const descricao = (cols[3] ?? "").replace(/^"|"$/g, "").trim();
+    // Colunas 4/5 (notificar/notificado) são usadas só pelo Apps Script.
+    // tipo/professor ficam nas colunas 6 e 7 (G e H da aba "quadros").
+    const tipoRaw = (cols[6] ?? "").replace(/^"|"$/g, "").trim().toLowerCase();
+    const tipo: "quadro" | "pdf" = tipoRaw === "pdf" ? "pdf" : "quadro";
+    const professor = (cols[7] ?? "").replace(/^"|"$/g, "").trim();
     if (!year || !month || !link) continue;
-    photos.push({ year, month, link, descricao });
+    photos.push({ year, month, link, descricao, tipo, professor });
   }
   return photos;
 }
@@ -401,7 +411,7 @@ export default function Calendar() {
             onClick={() => setShowBoards(true)}
             className={`hidden sm:block px-3 py-1.5 rounded-xl text-sm font-semibold bg-gradient-to-r ${theme.dot} text-white transition-all shadow-sm hover:shadow-md`}
           >
-            🖼️ Quadros
+            🖼️ Quadros e PDFs
           </button>
           <button
             onClick={() => setShowSchedule(true)}
@@ -492,7 +502,7 @@ export default function Calendar() {
           onClick={() => setShowBoards(true)}
           className={`w-full py-3 rounded-2xl text-sm font-bold bg-gradient-to-r ${theme.dot} text-white active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2`}
         >
-          🖼️ Ver Quadros da Sala
+          🖼️ Ver Quadros e PDFs
         </button>
       </div>
 
@@ -955,19 +965,24 @@ function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPh
   const currentMonth = today.getMonth() + 1;
   const currentYear = today.getFullYear();
 
+  const [activeTab, setActiveTab] = useState<"fotos" | "pdfs">("fotos");
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear] = useState(currentYear);
   const [lightbox, setLightbox] = useState<BoardPhoto | null>(null);
 
-  // Get unique months that have photos
+  const quadros = photos.filter((p) => p.tipo !== "pdf");
+  const pdfs = photos.filter((p) => p.tipo === "pdf");
+  const items = activeTab === "fotos" ? quadros : pdfs;
+
+  // Get unique months that have itens na aba ativa
   const availableMonths = Array.from(
-    new Set(photos.map((p) => `${p.year}-${p.month}`))
+    new Set(items.map((p) => `${p.year}-${p.month}`))
   ).map((key) => {
     const [y, m] = key.split("-").map(Number);
     return { year: y, month: m };
   }).sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
 
-  const filtered = photos.filter((p) => p.month === selectedMonth && p.year === selectedYear);
+  const filtered = items.filter((p) => p.month === selectedMonth && p.year === selectedYear);
 
   return (
     <>
@@ -983,8 +998,8 @@ function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPh
           {/* Header */}
           <div className={`bg-gradient-to-r ${theme.header} px-5 py-5 flex items-center justify-between shrink-0`}>
             <div>
-              <h3 className="text-xl font-bold text-white">🖼️ Quadros da Sala</h3>
-              <p className="text-white/70 text-sm">Fotos organizadas por mês</p>
+              <h3 className="text-xl font-bold text-white">🖼️ Quadros e PDFs</h3>
+              <p className="text-white/70 text-sm">Organizados por mês</p>
             </div>
             <button
               onClick={onClose}
@@ -992,16 +1007,40 @@ function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPh
             >✕</button>
           </div>
 
+          {/* Fotos / PDFs tabs */}
+          <div className="flex gap-2 px-4 pt-3 shrink-0">
+            <button
+              onClick={() => { setActiveTab("fotos"); setSelectedMonth(currentMonth); }}
+              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+                activeTab === "fotos"
+                  ? `bg-gradient-to-r ${theme.tab} text-white shadow-md`
+                  : "bg-gray-100 dark:bg-gray-900/60 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
+            >
+              🖼️ Fotos
+            </button>
+            <button
+              onClick={() => { setActiveTab("pdfs"); setSelectedMonth(currentMonth); }}
+              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+                activeTab === "pdfs"
+                  ? `bg-gradient-to-r ${theme.tab} text-white shadow-md`
+                  : "bg-gray-100 dark:bg-gray-900/60 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
+            >
+              📄 PDFs
+            </button>
+          </div>
+
           {/* Month tabs */}
           {availableMonths.length > 0 && (
-            <div className="flex gap-2 px-4 py-3 overflow-x-auto border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 shrink-0 hide-scrollbar">
+            <div className="flex gap-2 px-4 py-3 overflow-x-auto border-b border-gray-100 dark:border-gray-700 shrink-0 hide-scrollbar">
               {availableMonths.map((m) => (
                 <button
                   key={`${m.year}-${m.month}`}
                   onClick={() => setSelectedMonth(m.month)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                     selectedMonth === m.month && selectedYear === m.year
-                      ? `bg-gradient-to-r ${theme.tab} text-white shadow-md`
+                      ? "bg-gray-800 dark:bg-gray-600 text-white shadow-md"
                       : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
                   }`}
                 >
@@ -1011,22 +1050,30 @@ function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPh
             </div>
           )}
 
-          {/* Photos grid */}
+          {/* Content */}
           <div className="flex-1 overflow-y-auto p-4">
-            {photos.length === 0 && (
+            {items.length === 0 && (
               <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-                <div className="text-5xl mb-3">🖼️</div>
-                <p className="text-sm font-medium">Nenhuma foto ainda</p>
-                <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">Adicione fotos na aba "quadros" da planilha</p>
+                <div className="text-5xl mb-3">{activeTab === "fotos" ? "🖼️" : "📄"}</div>
+                <p className="text-sm font-medium">
+                  {activeTab === "fotos" ? "Nenhuma foto ainda" : "Nenhum PDF ainda"}
+                </p>
+                <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">
+                  Adicione na aba "quadros" da planilha, marcando tipo = "{activeTab === "fotos" ? "quadro" : "pdf"}"
+                </p>
               </div>
             )}
-            {photos.length > 0 && filtered.length === 0 && (
+            {items.length > 0 && filtered.length === 0 && (
               <div className="text-center py-16 text-gray-400 dark:text-gray-500">
                 <div className="text-5xl mb-3">📅</div>
-                <p className="text-sm font-medium">Sem fotos em {MONTH_NAMES_FULL[selectedMonth]}</p>
+                <p className="text-sm font-medium">
+                  {activeTab === "fotos" ? "Sem fotos" : "Sem PDFs"} em {MONTH_NAMES_FULL[selectedMonth]}
+                </p>
               </div>
             )}
-            {filtered.length > 0 && (
+
+            {/* Fotos grid */}
+            {activeTab === "fotos" && filtered.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {filtered.map((photo, i) => (
                   <button
@@ -1049,11 +1096,39 @@ function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPh
                 ))}
               </div>
             )}
+
+            {/* PDFs list */}
+            {activeTab === "pdfs" && filtered.length > 0 && (
+              <div className="flex flex-col gap-2.5">
+                {filtered.map((pdf, i) => (
+                  <a
+                    key={i}
+                    href={pdf.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-700/60 border border-gray-100 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm hover:shadow group"
+                  >
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${theme.dot} flex items-center justify-center text-white text-lg shadow-sm shrink-0`}>
+                      📄
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm truncate">
+                        {pdf.descricao || "PDF sem título"}
+                      </p>
+                      {pdf.professor && (
+                        <p className="text-gray-500 dark:text-gray-400 text-xs truncate">{pdf.professor}</p>
+                      )}
+                    </div>
+                    <span className="text-gray-300 dark:text-gray-500 group-hover:translate-x-1 transition-transform text-lg">→</span>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Lightbox */}
+      {/* Lightbox (só fotos) */}
       {lightbox && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
