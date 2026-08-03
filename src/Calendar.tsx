@@ -62,6 +62,7 @@ const THEMES = [
     text:   "from-indigo-600 to-purple-600",
     ring:   "ring-indigo-400",
     bg:     "linear-gradient(135deg,#f0f4ff 0%,#faf5ff 50%,#f0f9ff 100%)",
+    dark:   false,
   },
   {
     name: "vermelho",
@@ -76,6 +77,7 @@ const THEMES = [
     text:   "from-red-600 to-orange-600",
     ring:   "ring-red-400",
     bg:     "linear-gradient(135deg,#fff1f2 0%,#fff7ed 50%,#fef9f0 100%)",
+    dark:   false,
   },
   {
     name: "amarelo",
@@ -90,6 +92,7 @@ const THEMES = [
     text:   "from-yellow-600 to-lime-600",
     ring:   "ring-yellow-400",
     bg:     "linear-gradient(135deg,#fefce8 0%,#f7fee7 50%,#fefce8 100%)",
+    dark:   false,
   },
   {
     name: "roxo",
@@ -104,6 +107,7 @@ const THEMES = [
     text:   "from-violet-600 to-pink-600",
     ring:   "ring-violet-400",
     bg:     "linear-gradient(135deg,#f5f3ff 0%,#fdf4ff 50%,#fdf2f8 100%)",
+    dark:   false,
   },
   {
     name: "preto",
@@ -118,6 +122,22 @@ const THEMES = [
     text:   "from-gray-700 to-gray-900",
     ring:   "ring-gray-500",
     bg:     "linear-gradient(135deg,#f9fafb 0%,#f3f4f6 50%,#f1f5f9 100%)",
+    dark:   false,
+  },
+  {
+    name: "dark",
+    icon: "🔄",
+    from:   "#818cf8",
+    to:     "#e879f9",
+    tab:    "from-violet-600 to-fuchsia-600",
+    header: "from-violet-700 to-fuchsia-800",
+    emailHeader: "from-violet-700 to-fuchsia-800",
+    dot:    "from-violet-400 to-fuchsia-400",
+    badge:  "from-violet-600 to-fuchsia-600",
+    text:   "from-violet-400 to-fuchsia-400",
+    ring:   "ring-violet-400",
+    bg:     "linear-gradient(135deg,#0b0f19 0%,#0f1120 50%,#0a0e17 100%)",
+    dark:   true,
   },
 ];
 
@@ -254,6 +274,13 @@ export default function Calendar() {
     setThemeIdx(next);
     localStorage.setItem("ceam_theme", String(next));
   };
+
+  // Liga/desliga o modo escuro do Tailwind (classe "dark" na raiz do documento)
+  // sempre que o tema selecionado mudar.
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme.dark);
+  }, [theme.dark]);
+
   const [selectedDay, setSelectedDay] = useState<{ year: number; month: number; day: number } | null>(null);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [isOwner, setIsOwner] = useState(false);
@@ -342,14 +369,14 @@ export default function Calendar() {
   return (
     <div className="relative min-h-screen flex flex-col" style={{ background: theme.bg }}>
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100 shadow-sm px-4 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-indigo-100 dark:border-gray-800 shadow-sm px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${theme.header} flex items-center justify-center text-white text-sm shadow-md`}>
             📅
           </div>
           <div>
-            <h1 className="text-base font-bold text-gray-900 leading-tight">Calendário CEAM</h1>
-            <p className="text-xs text-gray-400 leading-tight">Trabalhos · 2026</p>
+            <h1 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight">Calendário CEAM</h1>
+            <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight">Trabalhos · 2026</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -363,20 +390,20 @@ export default function Calendar() {
           </button>
           <button
             onClick={fetchSheetData}
-            className="px-2 py-1.5 rounded-xl text-sm text-gray-400 hover:bg-white/60 transition-all"
+            className="px-2 py-1.5 rounded-xl text-sm text-gray-400 dark:text-gray-500 hover:bg-white/60 dark:hover:bg-gray-800/60 transition-all"
             title="Atualizar dados"
           >
             🔄
           </button>
           <button
             onClick={() => setShowBoards(true)}
-            className="hidden sm:block px-3 py-1.5 rounded-xl text-sm font-semibold bg-blue-500 text-white hover:bg-blue-600 transition-all shadow-sm hover:shadow-md"
+            className={`hidden sm:block px-3 py-1.5 rounded-xl text-sm font-semibold bg-gradient-to-r ${theme.dot} text-white transition-all shadow-sm hover:shadow-md`}
           >
             🖼️ Quadros
           </button>
           <button
             onClick={() => setShowSchedule(true)}
-            className="hidden sm:block px-3 py-1.5 rounded-xl text-sm font-semibold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md"
+            className="hidden sm:block px-3 py-1.5 rounded-xl text-sm font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm hover:shadow-md"
           >
             🕐 Horários
           </button>
@@ -389,7 +416,7 @@ export default function Calendar() {
           {isOwner && (
             <button
               onClick={() => setEditMode(!editMode)}
-              className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${editMode ? "bg-indigo-600 text-white hover:bg-indigo-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${editMode ? "bg-indigo-600 text-white hover:bg-indigo-700" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
             >
               {editMode ? "✏️ Editando" : "👁 Ver"}
             </button>
@@ -397,7 +424,7 @@ export default function Calendar() {
           {isOwner && (
             <button
               onClick={() => { setIsOwner(false); setEditMode(false); }}
-              className="px-3 py-1.5 rounded-xl text-sm bg-red-50 text-red-400 hover:bg-red-100 transition-colors"
+              className="px-3 py-1.5 rounded-xl text-sm bg-red-50 dark:bg-red-950 text-red-400 hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
             >
               Sair
             </button>
@@ -406,7 +433,7 @@ export default function Calendar() {
       </header>
 
       {/* Month tabs */}
-      <div className="bg-white/60 backdrop-blur-sm border-b border-indigo-50 px-4 py-2.5 flex gap-2 overflow-x-auto hide-scrollbar">
+      <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-b border-indigo-50 dark:border-gray-800 px-4 py-2.5 flex gap-2 overflow-x-auto hide-scrollbar">
         {MONTHS.map((m, i) => (
           <button
             key={m.month}
@@ -414,7 +441,7 @@ export default function Calendar() {
             className={`px-4 py-1.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
               currentMonthIndex === i
                 ? `bg-gradient-to-r ${theme.tab} text-white shadow-md`
-                : "bg-white text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 border border-gray-100"
+                : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 dark:hover:text-indigo-300 border border-gray-100 dark:border-gray-700"
             }`}
           >
             {m.name}
@@ -425,7 +452,7 @@ export default function Calendar() {
 
       {/* Loading bar */}
       {loading && (
-        <div className="h-0.5 bg-indigo-100 overflow-hidden">
+        <div className="h-0.5 bg-indigo-100 dark:bg-gray-800 overflow-hidden">
           <div className={`h-full bg-gradient-to-r ${theme.dot} animate-pulse w-full`} />
         </div>
       )}
@@ -458,20 +485,20 @@ export default function Calendar() {
 
 
       {/* Mobile boards button */}
-      <div className="sm:hidden px-4 pt-3 pb-1 bg-white/60 backdrop-blur-sm border-t border-gray-100">
+      <div className="sm:hidden px-4 pt-3 pb-1 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800">
         <button
           onClick={() => setShowBoards(true)}
-          className="w-full py-3 rounded-2xl text-sm font-bold bg-blue-500 text-white active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2"
+          className={`w-full py-3 rounded-2xl text-sm font-bold bg-gradient-to-r ${theme.dot} text-white active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2`}
         >
           🖼️ Ver Quadros da Sala
         </button>
       </div>
 
       {/* Mobile schedule button — shown below calendar on small screens */}
-      <div className="sm:hidden px-4 py-3 bg-white/60 backdrop-blur-sm">
+      <div className="sm:hidden px-4 py-3 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm">
         <button
           onClick={() => setShowSchedule(true)}
-          className="w-full py-3 rounded-2xl text-sm font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2"
+          className="w-full py-3 rounded-2xl text-sm font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2"
         >
           🕐 Ver Horários das Aulas
         </button>
@@ -506,14 +533,14 @@ export default function Calendar() {
       {/* Owner login modal */}
       {showOwnerLogin && (
         <Modal onClose={() => { setShowOwnerLogin(false); setOwnerPasswordInput(""); }}>
-          <h2 className="text-lg font-bold mb-4 text-gray-800">Modo Edição</h2>
+          <h2 className="text-lg font-bold mb-4 text-gray-800 dark:text-gray-100">Modo Edição</h2>
           <input
             type="password"
             placeholder="Senha"
             value={ownerPasswordInput}
             onChange={(e) => setOwnerPasswordInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleOwnerLogin()}
-            className="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             autoFocus
           />
           <button
@@ -554,11 +581,11 @@ function MonthView({
         <h2 className={`text-3xl font-extrabold bg-gradient-to-r ${theme.text} bg-clip-text text-transparent`}>
           {monthName}
         </h2>
-        <p className="text-sm text-gray-400 font-medium">{year}</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 font-medium">{year}</p>
       </div>
-      <div className="grid grid-cols-7 mb-2 bg-white/60 rounded-xl px-1 py-1 border border-indigo-50">
+      <div className="grid grid-cols-7 mb-2 bg-white/60 dark:bg-gray-900/40 rounded-xl px-1 py-1 border border-indigo-50 dark:border-gray-800">
         {DAY_NAMES.map((d) => (
-          <div key={d} className="text-center text-xs font-bold text-gray-400 py-1">{d}</div>
+          <div key={d} className="text-center text-xs font-bold text-gray-400 dark:text-gray-500 py-1">{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1.5">
@@ -578,12 +605,12 @@ function MonthView({
                 day-cell relative aspect-square flex flex-col items-center justify-start pt-1.5 rounded-xl text-sm font-medium
                 transition-all duration-200 hover:scale-105 active:scale-95
                 ${isToday ? `ring-2 ${theme.ring} today-pulse` : ""}
-                ${bgColor ? "border border-white/60" : "bg-white/80 hover:bg-white border border-indigo-50 hover:border-indigo-200"}
+                ${bgColor ? "border border-white/60 dark:border-gray-900/60" : "bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 border border-indigo-50 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-600"}
                 shadow-sm
               `}
               style={bgColor ? { backgroundColor: bgColor } : {}}
             >
-              <span className="text-xs font-bold text-gray-700">
+              <span className={`text-xs font-bold ${bgColor ? "text-gray-700" : "text-gray-700 dark:text-gray-200"}`}>
                 {day}
               </span>
               {hasAssignments && (
@@ -621,7 +648,7 @@ function DayModal({
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden"
+        className="bg-white dark:bg-gray-800 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className={`bg-gradient-to-r ${theme.header} px-5 py-5 flex items-center justify-between`}>
@@ -652,29 +679,29 @@ function DayModal({
 function AssignmentList({ assignments, theme, onSelect }: { assignments: Assignment[]; theme: Theme; onSelect: (a: Assignment) => void }) {
   if (assignments.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-400">
+      <div className="text-center py-12 text-gray-400 dark:text-gray-500">
         <div className="text-5xl mb-3">📭</div>
         <p className="text-sm font-medium">Nenhuma atividade nesse dia</p>
-        <p className="text-xs text-gray-300 mt-1">Aproveite a folga! 🎉</p>
+        <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">Aproveite a folga! 🎉</p>
       </div>
     );
   }
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs text-gray-400 uppercase font-bold mb-2 tracking-wider">Atividades</p>
+      <p className="text-xs text-gray-400 dark:text-gray-500 uppercase font-bold mb-2 tracking-wider">Atividades</p>
       {assignments.map((a, idx) => (
         <button
           key={a.id}
           onClick={() => onSelect(a)}
-          className="w-full text-left px-4 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 border border-indigo-100 transition-all flex items-center justify-between group shadow-sm hover:shadow"
+          className="w-full text-left px-4 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-700 dark:to-gray-700/70 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-gray-700 dark:hover:to-gray-600 border border-indigo-100 dark:border-gray-600 transition-all flex items-center justify-between group shadow-sm hover:shadow"
         >
           <div className="flex items-center gap-3">
             <div className={`w-7 h-7 rounded-xl bg-gradient-to-br ${theme.dot} flex items-center justify-center text-white text-xs font-bold shadow-sm`}>
               {idx + 1}
             </div>
-            <span className="font-semibold text-gray-800">{a.title}</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-100">{a.title}</span>
           </div>
-          <span className="text-indigo-400 group-hover:translate-x-1 transition-transform text-lg">→</span>
+          <span className="text-indigo-400 dark:text-indigo-300 group-hover:translate-x-1 transition-transform text-lg">→</span>
         </button>
       ))}
     </div>
@@ -688,12 +715,12 @@ function AssignmentDetail({ assignment }: { assignment: Assignment }) {
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white text-lg shadow-md">
           📝
         </div>
-        <h4 className="text-xl font-bold text-gray-800">{assignment.title}</h4>
+        <h4 className="text-xl font-bold text-gray-800 dark:text-gray-100">{assignment.title}</h4>
       </div>
-      <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
-        <p className="text-xs text-indigo-400 uppercase font-bold mb-2 tracking-wider">Descrição</p>
-        <div className="prose prose-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
-          {assignment.description || <span className="text-gray-400 italic">Sem descrição.</span>}
+      <div className="bg-indigo-50 dark:bg-gray-700/60 rounded-2xl p-4 border border-indigo-100 dark:border-gray-600">
+        <p className="text-xs text-indigo-400 dark:text-indigo-300 uppercase font-bold mb-2 tracking-wider">Descrição</p>
+        <div className="prose prose-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+          {assignment.description || <span className="text-gray-400 dark:text-gray-500 italic">Sem descrição.</span>}
         </div>
       </div>
     </div>
@@ -706,7 +733,7 @@ function EmailsModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden"
+        className="bg-white dark:bg-gray-800 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-5 py-5 flex items-center justify-between">
@@ -721,16 +748,16 @@ function EmailsModal({ onClose }: { onClose: () => void }) {
             <a
               key={p.email}
               href={`mailto:${p.email}`}
-              className="flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 hover:from-blue-100 hover:to-indigo-100 transition-all shadow-sm hover:shadow group"
+              className="flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700/70 border border-blue-100 dark:border-gray-600 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-gray-700 dark:hover:to-gray-600 transition-all shadow-sm hover:shadow group"
             >
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
                 {p.name[0]}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 text-sm">{p.name}</p>
-                <p className="text-blue-500 text-xs truncate">{p.email}</p>
+                <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{p.name}</p>
+                <p className="text-blue-500 dark:text-blue-300 text-xs truncate">{p.email}</p>
               </div>
-              <span className="text-blue-300 group-hover:translate-x-1 transition-transform text-lg">→</span>
+              <span className="text-blue-300 dark:text-blue-400 group-hover:translate-x-1 transition-transform text-lg">→</span>
             </a>
           ))}
         </div>
@@ -744,7 +771,7 @@ function EmailsModal({ onClose }: { onClose: () => void }) {
 function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
     </div>
@@ -820,7 +847,7 @@ function ScheduleModal({ theme, onClose }: { theme: Theme; onClose: () => void }
       onClick={onClose}
     >
       <div
-        className="bg-white w-full sm:max-w-5xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+        className="bg-white dark:bg-gray-800 w-full sm:max-w-5xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
         style={{ maxHeight: "90vh" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -842,10 +869,10 @@ function ScheduleModal({ theme, onClose }: { theme: Theme; onClose: () => void }
         <div className="hidden sm:block overflow-auto flex-1">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3 text-left font-bold text-gray-500 text-xs uppercase tracking-wider w-32">Horário</th>
+              <tr className="bg-gray-50 dark:bg-gray-900/60 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-4 py-3 text-left font-bold text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider w-32">Horário</th>
                 {DAYS.map((d) => (
-                  <th key={d} className="px-4 py-3 text-center font-bold text-gray-700 text-xs uppercase tracking-wider">
+                  <th key={d} className="px-4 py-3 text-center font-bold text-gray-700 dark:text-gray-200 text-xs uppercase tracking-wider">
                     {DAY_LABELS[d]}
                   </th>
                 ))}
@@ -853,10 +880,10 @@ function ScheduleModal({ theme, onClose }: { theme: Theme; onClose: () => void }
             </thead>
             <tbody>
               {(SCHEDULE as ScheduleRow[]).map((row, i) => (
-                <tr key={i} className={`border-b border-gray-100 ${row.recreio ? "bg-gray-50" : "hover:bg-gray-50/60"}`}>
-                  <td className="px-4 py-3 font-semibold text-gray-500 text-xs whitespace-nowrap">{row.time}</td>
+                <tr key={i} className={`border-b border-gray-100 dark:border-gray-700 ${row.recreio ? "bg-gray-50 dark:bg-gray-900/60" : "hover:bg-gray-50/60 dark:hover:bg-gray-700/40"}`}>
+                  <td className="px-4 py-3 font-semibold text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">{row.time}</td>
                   {row.recreio ? (
-                    <td colSpan={5} className="px-4 py-3 text-center font-bold text-gray-400 text-xs uppercase tracking-widest">
+                    <td colSpan={5} className="px-4 py-3 text-center font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-widest">
                       — Recreio —
                     </td>
                   ) : (
@@ -884,11 +911,11 @@ function ScheduleModal({ theme, onClose }: { theme: Theme; onClose: () => void }
         <div className="sm:hidden overflow-y-auto flex-1 px-4 py-4 flex flex-col gap-4">
           {DAYS.map((d) => (
             <div key={d}>
-              <h4 className="font-bold text-gray-700 text-sm mb-2 uppercase tracking-wider">{DAY_LABELS[d]}</h4>
+              <h4 className="font-bold text-gray-700 dark:text-gray-200 text-sm mb-2 uppercase tracking-wider">{DAY_LABELS[d]}</h4>
               <div className="flex flex-col gap-2">
                 {(SCHEDULE as ScheduleRow[]).map((row, i) => {
                   if (row.recreio) return (
-                    <div key={i} className="bg-gray-50 rounded-xl px-3 py-2 text-center text-xs text-gray-400 font-semibold border border-gray-100">
+                    <div key={i} className="bg-gray-50 dark:bg-gray-900/60 rounded-xl px-3 py-2 text-center text-xs text-gray-400 dark:text-gray-500 font-semibold border border-gray-100 dark:border-gray-700">
                       {row.time} · Recreio
                     </div>
                   );
@@ -947,7 +974,7 @@ function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPh
         onClick={onClose}
       >
         <div
-          className="bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+          className="bg-white dark:bg-gray-800 w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
           style={{ maxHeight: "90vh" }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -965,7 +992,7 @@ function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPh
 
           {/* Month tabs */}
           {availableMonths.length > 0 && (
-            <div className="flex gap-2 px-4 py-3 overflow-x-auto border-b border-gray-100 bg-gray-50 shrink-0 hide-scrollbar">
+            <div className="flex gap-2 px-4 py-3 overflow-x-auto border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 shrink-0 hide-scrollbar">
               {availableMonths.map((m) => (
                 <button
                   key={`${m.year}-${m.month}`}
@@ -973,7 +1000,7 @@ function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPh
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                     selectedMonth === m.month && selectedYear === m.year
                       ? "bg-blue-500 text-white shadow-md"
-                      : "bg-white text-gray-500 hover:bg-blue-50 border border-gray-200"
+                      : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
                   }`}
                 >
                   {MONTH_NAMES_FULL[m.month]}
@@ -985,14 +1012,14 @@ function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPh
           {/* Photos grid */}
           <div className="flex-1 overflow-y-auto p-4">
             {photos.length === 0 && (
-              <div className="text-center py-16 text-gray-400">
+              <div className="text-center py-16 text-gray-400 dark:text-gray-500">
                 <div className="text-5xl mb-3">🖼️</div>
                 <p className="text-sm font-medium">Nenhuma foto ainda</p>
-                <p className="text-xs text-gray-300 mt-1">Adicione fotos na aba "quadros" da planilha</p>
+                <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">Adicione fotos na aba "quadros" da planilha</p>
               </div>
             )}
             {photos.length > 0 && filtered.length === 0 && (
-              <div className="text-center py-16 text-gray-400">
+              <div className="text-center py-16 text-gray-400 dark:text-gray-500">
                 <div className="text-5xl mb-3">📅</div>
                 <p className="text-sm font-medium">Sem fotos em {MONTH_NAMES_FULL[selectedMonth]}</p>
               </div>
@@ -1003,7 +1030,7 @@ function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPh
                   <button
                     key={i}
                     onClick={() => setLightbox(photo)}
-                    className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95 bg-gray-100"
+                    className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95 bg-gray-100 dark:bg-gray-900"
                   >
                     <img
                       src={photo.link}
