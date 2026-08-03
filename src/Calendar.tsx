@@ -522,7 +522,7 @@ export default function Calendar() {
 
 
       {/* Emails modal */}
-      {showEmails && <EmailsModal onClose={() => setShowEmails(false)} />}
+      {showEmails && <EmailsModal theme={theme} onClose={() => setShowEmails(false)} />}
 
       {/* Boards modal */}
       {showBoards && <BoardsModal theme={theme} photos={boardsData} onClose={() => setShowBoards(false)} />}
@@ -729,17 +729,17 @@ function AssignmentDetail({ assignment }: { assignment: Assignment }) {
 
 // ─── Emails Modal ─────────────────────────────────────────────────────────────
 
-function EmailsModal({ onClose }: { onClose: () => void }) {
+function EmailsModal({ theme, onClose }: { theme: Theme; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
         className="bg-white dark:bg-gray-800 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-5 py-5 flex items-center justify-between">
+        <div className={`bg-gradient-to-r ${theme.emailHeader} px-5 py-5 flex items-center justify-between`}>
           <div>
             <h3 className="text-xl font-bold text-white">Emails dos Professores</h3>
-            <p className="text-blue-200 text-sm">Clique para enviar uma mensagem</p>
+            <p className="text-white/70 text-sm">Clique para enviar uma mensagem</p>
           </div>
           <button onClick={onClose} className="text-white/70 hover:text-white text-xl w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">✕</button>
         </div>
@@ -748,16 +748,16 @@ function EmailsModal({ onClose }: { onClose: () => void }) {
             <a
               key={p.email}
               href={`mailto:${p.email}`}
-              className="flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700/70 border border-blue-100 dark:border-gray-600 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-gray-700 dark:hover:to-gray-600 transition-all shadow-sm hover:shadow group"
+              className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-700/60 border border-gray-100 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm hover:shadow group"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
+              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${theme.dot} flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0`}>
                 {p.name[0]}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{p.name}</p>
-                <p className="text-blue-500 dark:text-blue-300 text-xs truncate">{p.email}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs truncate">{p.email}</p>
               </div>
-              <span className="text-blue-300 dark:text-blue-400 group-hover:translate-x-1 transition-transform text-lg">→</span>
+              <span className="text-gray-300 dark:text-gray-500 group-hover:translate-x-1 transition-transform text-lg">→</span>
             </a>
           ))}
         </div>
@@ -979,10 +979,10 @@ function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPh
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className={`bg-gradient-to-r from-blue-500 to-blue-700 px-5 py-5 flex items-center justify-between shrink-0`}>
+          <div className={`bg-gradient-to-r ${theme.header} px-5 py-5 flex items-center justify-between shrink-0`}>
             <div>
               <h3 className="text-xl font-bold text-white">🖼️ Quadros da Sala</h3>
-              <p className="text-blue-200 text-sm">Fotos organizadas por mês</p>
+              <p className="text-white/70 text-sm">Fotos organizadas por mês</p>
             </div>
             <button
               onClick={onClose}
@@ -999,8 +999,8 @@ function BoardsModal({ theme, photos, onClose }: { theme: Theme; photos: BoardPh
                   onClick={() => setSelectedMonth(m.month)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                     selectedMonth === m.month && selectedYear === m.year
-                      ? "bg-blue-500 text-white shadow-md"
-                      : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+                      ? `bg-gradient-to-r ${theme.tab} text-white shadow-md`
+                      : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
                   }`}
                 >
                   {MONTH_NAMES_FULL[m.month]}
