@@ -681,7 +681,7 @@ function DayModal({
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {selectedAssignment ? (
-            <AssignmentDetail assignment={selectedAssignment} />
+            <AssignmentDetail assignment={selectedAssignment} theme={theme} />
           ) : (
             <AssignmentList assignments={assignments} theme={theme} onSelect={onSelectAssignment} />
           )}
@@ -724,11 +724,11 @@ function AssignmentList({ assignments, theme, onSelect }: { assignments: Assignm
   );
 }
 
-function AssignmentDetail({ assignment }: { assignment: Assignment }) {
+function AssignmentDetail({ assignment, theme }: { assignment: Assignment; theme: Theme }) {
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white text-lg shadow-md">
+        <div className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${theme.dot} flex items-center justify-center text-white text-lg shadow-md`}>
           📝
         </div>
         <h4 className="text-xl font-bold text-gray-800 dark:text-gray-100">{assignment.title}</h4>
