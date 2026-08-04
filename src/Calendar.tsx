@@ -147,7 +147,7 @@ type Theme = typeof THEMES[0];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Assignment = { id: string; title: string; description: string };
+type Assignment = { id: string; title: string; description: string; image?: string };
 type DayKey = string; // "year-month-day"
 type SheetData = Record<DayKey, Assignment[]>;
 type ColorData = Record<DayKey, string>;
@@ -252,6 +252,9 @@ function parseCSV(csv: string): { sheetData: SheetData; sheetColors: ColorData }
     const title       = (cols[3] ?? "").replace(/^"|"$/g, "").trim();
     const description = (cols[4] ?? "").replace(/^"|"$/g, "").trim();
     const colorRaw    = (cols[5] ?? "").replace(/^"|"$/g, "").trim();
+    // Colunas 6/7 (notificar/notificado) são usadas só pelo Apps Script.
+    // A imagem fica na coluna 8 (I da planilha).
+    const image       = (cols[8] ?? "").replace(/^"|"$/g, "").trim();
 
     if (!year || !month || !day) continue;
 
@@ -266,7 +269,7 @@ function parseCSV(csv: string): { sheetData: SheetData; sheetColors: ColorData }
     // assignment (skip if no title)
     if (title) {
       if (!sheetData[key]) sheetData[key] = [];
-      sheetData[key].push({ id: `${key}-${sheetData[key].length}`, title, description });
+      sheetData[key].push({ id: `${key}-${sheetData[key].length}`, title, description, image: image || undefined });
     }
   }
   return { sheetData, sheetColors };
@@ -712,6 +715,7 @@ function AssignmentList({ assignments, theme, onSelect }: { assignments: Assignm
               {idx + 1}
             </div>
             <span className="font-semibold text-gray-800 dark:text-gray-100">{a.title}</span>
+            {a.image && <span title="Tem foto" className="text-xs">📷</span>}
           </div>
           <span className="text-indigo-400 dark:text-indigo-300 group-hover:translate-x-1 transition-transform text-lg">→</span>
         </button>
@@ -729,6 +733,17 @@ function AssignmentDetail({ assignment }: { assignment: Assignment }) {
         </div>
         <h4 className="text-xl font-bold text-gray-800 dark:text-gray-100">{assignment.title}</h4>
       </div>
+      {assignment.image && (
+        <a href={assignment.image} target="_blank" rel="noopener noreferrer" className="block mb-4">
+          <img
+            src={assignment.image}
+            alt={assignment.title}
+            loading="lazy"
+            className="w-full max-h-64 object-cover rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        </a>
+      )}
       <div className="bg-indigo-50 dark:bg-gray-700/60 rounded-2xl p-4 border border-indigo-100 dark:border-gray-600">
         <p className="text-xs text-indigo-400 dark:text-indigo-300 uppercase font-bold mb-2 tracking-wider">Descrição</p>
         <div className="prose prose-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
