@@ -152,7 +152,7 @@ const THEMES = [
     emailHeader: "from-neutral-900 to-orange-900",
     dot:    "from-orange-400 to-orange-600",
     badge:  "from-orange-400 to-orange-500",
-    text:   "from-violet-400 to-fuchsia-400",
+    text:   "from-orange-400 to-orange-500",
     ring:   "ring-orange-400",
     bg:     "linear-gradient(135deg,#0a0a0a 0%,#141414 50%,#0a0a0a 100%)",
     dark:   true,
