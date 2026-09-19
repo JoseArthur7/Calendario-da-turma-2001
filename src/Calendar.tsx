@@ -43,6 +43,7 @@ const PROFESSORS = [
   { name: "Diego",             email: "bottinodiego@gmail.com" },
   { name: "Maycon",             email: "mcialdinesoares@gmail.com" },
   { name: "Ronaldo",             email: "ronaldofg1@gmail.com" },
+  { name: "Arthur Historia",             email: "arthurevar@gmail.com" },
   { name: "Email da Escola",              email: "contato.ceam@gmail.com" },
 ];
 
@@ -139,6 +140,21 @@ const THEMES = [
     text:   "from-violet-400 to-fuchsia-400",
     ring:   "ring-violet-400",
     bg:     "linear-gradient(135deg,#0b0f19 0%,#0f1120 50%,#0a0e17 100%)",
+    dark:   true,
+  },
+  {
+    name: "hub",
+    icon: "🔄",
+    from:   "#fb923c",
+    to:     "#f97316",
+    tab:    "from-orange-600 to-orange-800",
+    header: "from-neutral-900 to-orange-900",
+    emailHeader: "from-neutral-900 to-orange-900",
+    dot:    "from-orange-400 to-orange-600",
+    badge:  "from-orange-400 to-orange-500",
+    text:   "from-violet-400 to-fuchsia-400",
+    ring:   "ring-orange-400",
+    bg:     "linear-gradient(135deg,#0a0a0a 0%,#141414 50%,#0a0a0a 100%)",
     dark:   true,
   },
 ];
