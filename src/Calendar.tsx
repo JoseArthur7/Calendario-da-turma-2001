@@ -521,6 +521,17 @@ export default function Calendar() {
 
 
 
+      {/* Lanche Coletivo */}
+      <div className="flex justify-center px-4 py-5 sm:py-6">
+        <a
+          href="/lanche-coletivo.html"
+          className={`inline-flex min-h-[56px] w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-gradient-to-r ${theme.badge} px-6 py-4 text-base font-bold text-white shadow-md transition-all hover:shadow-lg active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 sm:max-w-sm`}
+        >
+          <span aria-hidden="true">🥪</span>
+          Lanche Coletivo
+        </a>
+      </div>
+
       {/* Mobile boards button */}
       <div className="sm:hidden px-4 pt-3 pb-1 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800">
         <button
