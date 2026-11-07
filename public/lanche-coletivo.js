@@ -198,7 +198,7 @@
     button.disabled = true;
     message(ui.suggestMessage);
     try {
-      await rpc("lanche_sugerir", { p_nome: ui.suggestForm.elements.item.value });
+      await rpc("lanche_sugerir", { p_nome: ui.suggestForm.elements.namedItem("item").value });
       ui.suggestForm.reset();
       message(ui.suggestMessage, "Sugestão registrada. Valeu!");
       if (admin && !ui.adminArea.hidden) void refreshAdmin();
@@ -232,11 +232,11 @@
 
   function editItem(item) {
     editingItemId = item.id;
-    ui.itemForm.elements.item.value = item.nome;
+    ui.itemForm.elements.namedItem("item").value = item.nome;
     ui.itemForm.elements.limit.value = item.limite;
     submit(ui.itemForm).textContent = "Salvar mudanças";
     ui.cancelEdit.hidden = false;
-    ui.itemForm.elements.item.focus();
+    ui.itemForm.elements.namedItem("item").focus();
   }
 
   function renderAdmin(data) {
@@ -381,8 +381,9 @@
       const data = await rpc("lanche_admin_dados");
       renderAdmin(data);
       setAdmin(true);
-      ui.itemForm.elements.item.focus();
+      ui.itemForm.elements.namedItem("item").focus();
     } catch (error) {
+      setAdmin(false);
       await db.auth.signOut({ scope: "local" }).catch(() => {});
       message(ui.adminMessage, explain(error, "Não foi possível entrar. Confira seu e-mail e sua senha."), true);
     } finally {
@@ -411,7 +412,7 @@
     const limit = ui.itemForm.elements.limit.valueAsNumber;
     void adminTask("lanche_admin_salvar_item", {
       p_item_id: editingItemId,
-      p_nome: ui.itemForm.elements.item.value,
+      p_nome: ui.itemForm.elements.namedItem("item").value,
       p_limite: limit
     }, editingItemId ? "Item atualizado." : "Item criado.", resetEditor);
   });
