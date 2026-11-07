@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#faf5e9">
+  <title>Lanche Coletivo · Turma 2001</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./lanche-coletivo.css">
+  <script defer src="./lanche-coletivo-config.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="./lanche-coletivo.js"></script>
+</head>
+<body>
+  <main class="paper">
+    <header class="topline">
+      <a class="back" href="/">← Calendário</a>
+      <span class="class-stamp">TURMA 2001</span>
+    </header>
+
+    <section class="hero" aria-labelledby="title">
+      <div class="hero-copy">
+        <p class="eyebrow">CADERNO DA TURMA / 01</p>
+        <h1 id="title">Lanche <span>Coletivo</span></h1>
+        <p>Escolha o que vai levar, escreva seu nome e reserve uma vaga.</p>
+      </div>
+      <svg class="doodle" viewBox="0 0 148 135" fill="none" aria-hidden="true">
+        <path d="M29 56c5-19 15-29 36-29 21 0 35 10 39 29M28 57c12 3 64 3 77 0M30 71c9 9 63 9 73 0M26 70c5-8 13-8 20-1 6 6 15 6 22 0s15-5 22 0c6 4 11 3 16-3M32 84c1 11 9 18 20 18h30c11 0 19-7 20-18H32Z" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="m55 42 3 2m16-6 4 2m8 7 4 2M113 37l10-9m-8 20 14-2M15 86l-8 4m13 4-2 10M111 104l8 6m-1-13 12 1" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        <path d="M12 42c4 2 6 5 6 10 1-5 3-8 8-9-4-1-7-4-8-8-1 3-3 6-6 7ZM117 74c6 2 9 6 10 12 1-6 4-10 10-11-6-1-9-5-10-11-1 5-4 9-10 10Z" stroke="#b15e48" stroke-width="2" stroke-linejoin="round"/>
+      </svg>
+    </section>
+
+    <section class="entries" aria-labelledby="entries-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">01 / LISTA DA TURMA</p>
+          <h2 id="entries-title">O que vamos levar?</h2>
+        </div>
+        <span class="connection" id="connection">Conectando…</span>
+      </div>
+      <p id="list-note" class="notice" role="status">Carregando as vagas…</p>
+      <ul id="item-list" class="item-list"></ul>
+      <p id="public-message" class="message" role="status"></p>
+    </section>
+
+    <section class="suggestion" aria-labelledby="suggest-title">
+      <p class="eyebrow">02 / IDEIAS DA TURMA</p>
+      <h2 id="suggest-title">Faltou alguma coisa?</h2>
+      <p>Sugira um item sem informar seu nome. Só o administrador recebe a ideia.</p>
+      <form id="suggest-form" class="inline-form">
+        <label class="grow">Sua sugestão
+          <input name="item" placeholder="Ex.: brigadeiro" required minlength="2" maxlength="70">
+        </label>
+        <button type="submit" disabled>Enviar sugestão</button>
+      </form>
+      <p id="suggest-message" class="message" role="status"></p>
+    </section>
+
+    <footer>
+      <span>Caderno da turma · 2001</span>
+      <button id="admin-open" type="button" class="text-button" aria-expanded="false" aria-controls="admin-area" disabled>Administração</button>
+    </footer>
+
+    <section id="admin-area" class="admin" aria-labelledby="admin-title" hidden>
+      <div class="section-heading">
+        <h2 id="admin-title">Painel do organizador</h2>
+        <button id="admin-logout" type="button" class="secondary" hidden>Sair</button>
+      </div>
+      <form id="login-form" class="form-stack">
+        <label>E-mail
+          <input type="email" name="email" autocomplete="username" required>
+        </label>
+        <label>Senha
+          <input type="password" name="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit">Entrar</button>
+      </form>
+      <p id="admin-message" class="message" role="status"></p>
+      <div id="admin-content" hidden>
+        <form id="item-form" class="inline-form admin-form">
+          <label class="grow">Nome do item
+            <input name="item" placeholder="Ex.: refrigerante" required minlength="2" maxlength="70">
+          </label>
+          <label class="limit">Limite
+            <input name="limit" type="number" min="1" max="100" value="1" required inputmode="numeric">
+          </label>
+          <div class="actions">
+            <button type="submit">Criar item</button>
+            <button id="cancel-edit" type="button" class="secondary" hidden>Cancelar</button>
+          </div>
+        </form>
+        <h3>Itens e reservas</h3>
+        <div id="admin-items"></div>
+        <div class="section-heading admin-heading">
+          <h3>Sugestões recebidas</h3>
+          <button id="admin-refresh" type="button" class="secondary">Atualizar</button>
+        </div>
+        <div id="admin-suggestions"></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="reserve-dialog" aria-labelledby="reserve-title">
+    <form id="reserve-form" class="form-stack">
+      <p class="eyebrow">RESERVAR UMA VAGA</p>
+      <h2 id="reserve-title"></h2>
+      <p id="reserve-count"></p>
+      <label>Seu nome
+        <input name="person" placeholder="Ex.: José Arthur" autocomplete="off" required minlength="2" maxlength="70">
+      </label>
+      <p id="reserve-message" class="message" role="status"></p>
+      <div class="actions">
+        <button id="reserve-cancel" type="button" class="secondary">Cancelar</button>
+        <button type="submit">Confirmar reserva</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="accept-dialog" aria-labelledby="accept-title">
+    <form id="accept-form" class="form-stack">
+      <p class="eyebrow">ACEITAR SUGESTÃO</p>
+      <h2 id="accept-title"></h2>
+      <label>Limite de pessoas
+        <input type="number" name="limit" min="1" max="100" value="1" required inputmode="numeric">
+      </label>
+      <p id="accept-message" class="message" role="status"></p>
+      <div class="actions">
+        <button id="accept-cancel" type="button" class="secondary">Cancelar</button>
+        <button type="submit">Adicionar à lista</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="item-template">
+    <li class="item-card">
+      <div class="item-meta">
+        <span class="item-number" aria-hidden="true"></span>
+        <div>
+          <h3></h3>
+          <span class="item-count"></span>
+        </div>
+      </div>
+      <button type="button"></button>
+      <div class="meter" aria-hidden="true"><span></span></div>
+    </li>
+  </template>
+</body>
+</html>
