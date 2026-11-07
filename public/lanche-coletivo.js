@@ -88,6 +88,13 @@
       row.querySelector("h3").textContent = item.nome;
       row.querySelector(".item-count").textContent = item.ocupadas + " de " + item.limite + " ocupadas";
       row.querySelector(".meter span").style.width = (100 * item.ocupadas / item.limite) + "%";
+      const names = item.nomes ?? [];
+      row.querySelector(".item-reservations").hidden = names.length === 0;
+      const nameList = row.querySelector(".participant-names");
+      nameList.setAttribute("aria-label", "Pessoas que vão levar " + item.nome);
+      for (const name of names) {
+        nameList.append(makeElement("li", name));
+      }
       const button = row.querySelector("button");
       button.dataset.itemId = item.id;
       button.disabled = left === 0;
@@ -121,10 +128,7 @@
       do {
         refreshAgain = false;
         try {
-          const { data, error } = await db.from("lanche_itens")
-            .select("id,nome,limite,ocupadas,criado_em")
-            .order("criado_em").order("id");
-          if (error) throw error;
+          const data = await rpc("lanche_lista");
           hasLoaded = true;
           const changed = JSON.stringify(items) !== JSON.stringify(data);
           items = data;

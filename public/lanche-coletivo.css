@@ -229,3 +229,8 @@ dialog h2 { overflow-wrap: anywhere; }
   .suggestion .inline-form button { flex: 1 1 100%; }
   .admin { padding: 10px; }
 }
+
+.item-reservations { grid-column: 1 / -1; min-width: 0; padding-top: 2px; }
+.reservation-label { display: block; color: var(--muted); font-size: .75rem; font-weight: 800; margin-bottom: 5px; }
+.participant-names { display: flex; flex-wrap: wrap; gap: 5px; list-style: none; padding: 0; margin: 0; }
+.participant-names li { max-width: 100%; padding: 4px 9px; border: 1px solid #dfd3af; border-radius: 7px; background: #f7efd8; color: var(--ink); font-size: .85rem; font-weight: 800; overflow-wrap: anywhere; }

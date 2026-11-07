@@ -49,7 +49,7 @@
     <section class="suggestion" aria-labelledby="suggest-title">
       <p class="eyebrow">02 / IDEIAS DA TURMA</p>
       <h2 id="suggest-title">Faltou alguma coisa?</h2>
-      <p>Sugira um item sem informar seu nome. Só o administrador recebe a ideia.</p>
+      <p>Sugira um item</p>
       <form id="suggest-form" class="inline-form">
         <label class="grow">Sua sugestão
           <input name="item" placeholder="Ex.: brigadeiro" required minlength="2" maxlength="70">
@@ -145,6 +145,10 @@
       </div>
       <button type="button"></button>
       <div class="meter" aria-hidden="true"><span></span></div>
+      <div class="item-reservations" hidden>
+        <span class="reservation-label">Quem vai levar</span>
+        <ul class="participant-names"></ul>
+      </div>
     </li>
   </template>
 </body>
