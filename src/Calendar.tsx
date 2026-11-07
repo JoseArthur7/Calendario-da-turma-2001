@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { toast } from "sonner";
 
 const SHEET_ID = "1YGSZ7rJkSkhyb0OFkMVxRht-4L6tXlgDN3vRELJuzIo";
@@ -13,24 +13,20 @@ const MONTHS = [
   { month: 12, name: "Dezembro", year: 2026 },
 ];
 
+function getInitialMonthIndex(today = new Date()) {
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth() + 1;
+  const index = MONTHS.findIndex(({ year, month }) =>
+    year > currentYear || (year === currentYear && month >= currentMonth)
+  );
+  return index === -1 ? MONTHS.length - 1 : index;
+}
+
 const MONTH_NAMES: Record<number, string> = {
   8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
 };
 
 const DAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
-const PRESET_COLORS = [
-  { label: "White",  value: "#ffffff" },
-  { label: "Red",    value: "#fecaca" },
-  { label: "Orange", value: "#fed7aa" },
-  { label: "Yellow", value: "#fef08a" },
-  { label: "Green",  value: "#bbf7d0" },
-  { label: "Blue",   value: "#bfdbfe" },
-  { label: "Purple", value: "#e9d5ff" },
-  { label: "Pink",   value: "#fbcfe8" },
-  { label: "Teal",   value: "#99f6e4" },
-  { label: "Gray",   value: "#e5e7eb" },
-];
 
 const PROFESSORS = [
   { name: "Marcia",             email: "marma.jual@gmail.com" },
@@ -226,21 +222,23 @@ function parseBoardsCSV(csv: string): BoardPhoto[] {
 
 // ─── Color name → hex ────────────────────────────────────────────────────────
 
-const COLOR_MAP: Record<string, string> = {
-  vermelho: "#fecaca",
-  laranja:  "#fed7aa",
-  amarelo:  "#fef08a",
-  verde:    "#bbf7d0",
-  azul:     "#bfdbfe",
-  roxo:     "#e9d5ff",
-  rosa:     "#fbcfe8",
-  turquesa: "#99f6e4",
-  cinza:    "#e5e7eb",
-};
+const DAY_COLORS = [
+  { names: ["white", "branco"], value: "#ffffff" },
+  { names: ["red", "vermelho"], value: "#fecaca" },
+  { names: ["orange", "laranja"], value: "#fed7aa" },
+  { names: ["yellow", "amarelo"], value: "#fef08a" },
+  { names: ["green", "verde"], value: "#bbf7d0" },
+  { names: ["blue", "azul"], value: "#bfdbfe" },
+  { names: ["purple", "roxo"], value: "#e9d5ff" },
+  { names: ["pink", "rosa"], value: "#fbcfe8" },
+  { names: ["teal", "turquesa"], value: "#99f6e4" },
+  { names: ["gray", "grey", "cinza"], value: "#e5e7eb" },
+];
 
 function resolveColor(raw: string): string | undefined {
-  const key = raw.toLowerCase().trim();
-  return COLOR_MAP[key] ?? (raw.startsWith("#") ? raw : undefined);
+  const key = raw.trim().toLowerCase();
+  if (/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/.test(key)) return key;
+  return DAY_COLORS.find(({ names }) => names.includes(key))?.value;
 }
 
 // ─── CSV Parser ───────────────────────────────────────────────────────────────
@@ -296,7 +294,8 @@ function parseCSV(csv: string): { sheetData: SheetData; sheetColors: ColorData }
 // ─── Main Calendar ────────────────────────────────────────────────────────────
 
 export default function Calendar() {
-  const [currentMonthIndex, setCurrentMonthIndex] = useState(0);
+  const [initialMonthIndex] = useState(getInitialMonthIndex);
+  const [currentMonthIndex, setCurrentMonthIndex] = useState(initialMonthIndex);
   const [themeIdx, setThemeIdx] = useState<number>(() => {
     try { return parseInt(localStorage.getItem("ceam_theme") ?? "0"); } catch { return 0; }
   });
@@ -331,6 +330,7 @@ export default function Calendar() {
   const [loading, setLoading] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const initialMonthTabRef = useRef<HTMLButtonElement>(null);
 
   // Fetch Google Sheets data
   const fetchSheetData = useCallback(async () => {
@@ -365,21 +365,24 @@ export default function Calendar() {
     return () => clearInterval(interval);
   }, [fetchSheetData]);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollLeft = currentMonthIndex * scrollRef.current.offsetWidth;
+  useLayoutEffect(() => {
+    const calendar = scrollRef.current;
+    if (calendar) {
+      calendar.scrollLeft = initialMonthIndex * calendar.clientWidth;
     }
-  }, []);
+    initialMonthTabRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [initialMonthIndex]);
 
   const handleScroll = () => {
-    if (!scrollRef.current) return;
-    const idx = Math.round(scrollRef.current.scrollLeft / scrollRef.current.offsetWidth);
+    const calendar = scrollRef.current;
+    if (!calendar?.clientWidth) return;
+    const idx = Math.round(calendar.scrollLeft / calendar.clientWidth);
     setCurrentMonthIndex(idx);
   };
 
   const scrollToMonth = (idx: number) => {
     if (!scrollRef.current) return;
-    scrollRef.current.scrollTo({ left: idx * scrollRef.current.offsetWidth, behavior: "smooth" });
+    scrollRef.current.scrollTo({ left: idx * scrollRef.current.clientWidth, behavior: "smooth" });
     setCurrentMonthIndex(idx);
   };
 
@@ -470,6 +473,7 @@ export default function Calendar() {
         {MONTHS.map((m, i) => (
           <button
             key={m.month}
+            ref={i === initialMonthIndex ? initialMonthTabRef : undefined}
             onClick={() => scrollToMonth(i)}
             className={`px-4 py-1.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
               currentMonthIndex === i
@@ -494,7 +498,7 @@ export default function Calendar() {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth"
+        className="flex-1 flex overflow-x-auto snap-x snap-mandatory"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {MONTHS.map((m) => (
